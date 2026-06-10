@@ -30,10 +30,11 @@ Approach 2 — estimated post-hoc by detection layer [FALLBACK]
 ---
 
 ## 2. Manifest Schema [DEFINED]
-Defined in README.md section 3.2.
-Reference that file. Do not duplicate here.
-Any schema changes must be made in README.md first,
-then reflected here.
+Defined in README.md section 3.2 of the proposal repository.
+Reference: https://github.com/systemacticco-rgb/linguistic-provenance-schema#32-what-lps-records
+Do not duplicate the schema here.
+Any schema changes must be made in the proposal repository first,
+then reflected in this implementation.
 
 ---
 
