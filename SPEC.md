@@ -169,7 +169,6 @@ no binary compatibility risk, no version management required.
 @contentauth/c2pa-node is used in component 3 (embedding layer)
 only. Signing and embedding are separate concerns using separate
 tools.
-
 ---
 
 ## 4. Embedding Layer [DEFINED — infrastructure exists]
@@ -245,17 +244,29 @@ Requires verification tool update to deserialize CBOR on extraction.
 
 ---
 
-## 5. Verification Tool [PLACEHOLDER]
+## 5. Verification Tool [DEFINED — commit pending]
 Input: file or text string with embedded manifest
 Steps in order:
 1. Extract manifest from content
 2. Check signature against public key
 3. Check certificate validity
-4. Render contribution breakdown
+4. Hash extracted clean text, compare against text_hash in manifest.
+   If mismatch: return failed with reason.
+5. Render contribution breakdown.
 
-Output — passing result: [TO BE DEFINED]
-Output — failing result: [TO BE DEFINED]
-Output — degraded result (partial signal): [TO BE DEFINED]
+Output — verified: signal intact, signature valid, text hash matches.
+  Returns: status, signed_at, algorithm, overall_ai_proportion,
+  human_proportion, segments array with full breakdown.
+
+Output — failed: signal found but signature invalid, or visible
+  text hash does not match. Returns: status, reason, signed_at,
+  algorithm.
+
+Output — degraded: signal absent or corrupted. Returns: status,
+  reason, anti_forensic_note.
+
+Output — registry_required: not implemented in v0.1.
+  Architecture defined in PROPOSALS.md PROPOSAL 001.
 
 Constraint: verification never modifies the input
 Constraint: certificate revocation check is mandatory,
@@ -297,11 +308,11 @@ Each component requires:
 
 ## 9. Open Questions — Blocking
 These must be resolved before building the signing layer:
-- [ ] Signing algorithm selection
+- [ ] Signing algorithm selection —  DEFINED, ES256 ECDSA P-256
 - [ ] Key storage method for v0.1
 - [ ] Capacity threshold for Unicode variation selectors
       [IN PROGRESS — first data point logged in section 4, June 2026]
-- [ ] Passing/failing/degraded output format
+- [ ] Passing/failing/degraded output format —  DEFINED, JSON, four states
 
 ---
 
