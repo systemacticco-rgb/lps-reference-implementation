@@ -101,3 +101,31 @@ positions LPS as infrastructure, not just a tool.
 Do not resolve before working group engagement begins.
 This is a policy and regulatory question, not a build question.
 Bring it to the working group as an open proposal, not a solution.
+
+
+## RESEARCH 003 — Infrastructure Cost and Secrets Management
+Date: June 2026
+Status: DEFERRED — post-v0.1 concern
+
+### What this covers
+- Secrets manager selection: AWS Secrets Manager vs HashiCorp Vault
+- CA-issued certificate cost and tier selection
+- Company registration requirement for Organization Validation certificate
+- Vercel environment variable limits for production key storage
+
+### When to open this
+After reference implementation is complete and working group
+engagement has begun. Before any production deployment or
+client contract is signed.
+
+### Cost estimates logged
+AWS Secrets Manager: ~$0.40 per secret per month
+HashiCorp Vault managed: ~$0.03 per hour
+CA certificate Organization Validation: ~$100-300 per year
+CA certificate Domain Validation: ~$10-100 per year
+
+### Decision to make at that point
+- Which secrets manager fits Systemactic infrastructure
+- Whether to register Systemactic as legal entity before or after
+  working group submission
+- Which CA to use for production certificate
