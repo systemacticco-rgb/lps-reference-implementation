@@ -132,18 +132,21 @@ embedding layer. It seals the manifest before it enters the text.
 
 ## 3. Signing Layer [SECURITY-CRITICAL]
 Algorithm: es256 (ECDSA P-256)
-Library: Node.js built-in crypto module (no install required) Note: @contentauth/c2pa-node is used in component 3 (embedding layer)       only, not for signing. Signing uses native crypto exclusively.
+Library: Node.js built-in crypto module (no install required)
+Note: @contentauth/c2pa-node is used in component 3 (embedding
+      layer) only, not for signing. Signing uses native crypto
+      exclusively.
 Note: original c2pa-node deprecated September 2025 — do not use.
 Key format: PEM
-Certificate handling: self-signed for v0.1, CA-issued for production
-
-Key storage v0.1: environment variable via .env file,
-                  gitignored, never logged, never hardcoded.
-
-Certificate generation command:
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 \
-  -keyout private.pem -out cert.pem -days 365 -nodes \
-  -subj "/CN=lps-reference-implementation-v0.1"
+Certificate generation commands:
+openssl ecparam -name prime256v1 -genkey -noout -out private_raw.pem
+openssl req -new -x509 -key private_raw.pem -out cert.pem -days 365 \
+  -subj "/CN=lps-reference-implementation-v0.1" \
+  -addext "subjectKeyIdentifier=hash" \
+  -addext "authorityKeyIdentifier=keyid:always" \
+  -addext "basicConstraints=critical,CA:FALSE"
+openssl pkcs8 -topk8 -nocrypt -in private_raw.pem -out private.pem
+rm private_raw.pem
 
 private.pem — gitignored, never committed.
 cert.pem — committed for v0.1 testing only.
@@ -155,6 +158,17 @@ Constraints:
   zero shared mutable state
 - SIGNING_ENABLED environment variable checked first in every
   signing function before any key access
+
+  Why not @contentauth/c2pa-node for signing:
+@contentauth/c2pa-node is designed to sign media files — images,
+video, audio. It embeds C2PA manifests into binary media containers.
+LPS signs JSON text manifests, not media files. The library cannot
+sign arbitrary JSON without a media file wrapper. Node.js built-in
+crypto signs any data format directly. No external dependency,
+no binary compatibility risk, no version management required.
+@contentauth/c2pa-node is used in component 3 (embedding layer)
+only. Signing and embedding are separate concerns using separate
+tools.
 
 ---
 
