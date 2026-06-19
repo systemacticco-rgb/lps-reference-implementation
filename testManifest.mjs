@@ -1,6 +1,9 @@
 import { generateManifest } from './manifestGenerator.mjs';
 
+const visibleText = 'A'.repeat(501);
+
 const result = generateManifest({
+  visibleText,
   segments: [
     {
       segmentId: "s001",

@@ -1,7 +1,10 @@
 import { generateManifest } from './manifestGenerator.mjs';
 import { signManifest } from './signingLayer.mjs';
 
+const visibleText = 'A'.repeat(401);
+
 const manifest = generateManifest({
+  visibleText,
   segments: [
     {
       segmentId: "s001",
