@@ -132,7 +132,7 @@ embedding layer. It seals the manifest before it enters the text.
 
 ## 3. Signing Layer [SECURITY-CRITICAL]
 Algorithm: es256 (ECDSA P-256)
-Library: @contentauth/c2pa-node (c2pa-node-v2, v0.6.0)
+Library: Node.js built-in crypto module (no install required) Note: @contentauth/c2pa-node is used in component 3 (embedding layer)       only, not for signing. Signing uses native crypto exclusively.
 Note: original c2pa-node deprecated September 2025 — do not use.
 Key format: PEM
 Certificate handling: self-signed for v0.1, CA-issued for production
