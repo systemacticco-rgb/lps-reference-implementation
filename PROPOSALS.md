@@ -94,3 +94,36 @@ Architecture decision pending: foundation-hosted vs federated registry.
 - What happens when the same content is legitimately re-published
   by a different party — does it get a new token or inherit the
   original?
+
+## PROPOSAL 003 — Character-Level Provenance Binding
+Date: June 2026
+Status: OPEN — beyond v0.1, capacity problem unsolved
+
+### Plain terms
+Instead of appending one invisible payload block after the visible
+text, each visible character gets its own invisible marker attached
+to it. If characters are moved, deleted, or inserted, their markers
+move or disappear with them. The system can detect not just that
+something changed but exactly which characters were affected and
+where they were in the original sequence.
+
+### What this enables
+Forensic diff at character level. Not just "something changed"
+but "character 14 deleted, characters 22-27 moved, 3 characters
+inserted at position 9."
+
+### Why it does not exist in c2pa-text today
+c2pa-text appends all invisible bytes as one block after the visible
+text. No positional relationship between individual visible characters
+and individual invisible markers exists in the current spec.
+
+### Unsolved problem
+One marker per character multiplies payload size by content length.
+A 500 character document requires 500 markers plus the manifest.
+This exceeds the 256 byte capacity ceiling of the variation selector
+method immediately. A different embedding method would be required.
+
+### Status
+Do not build until capacity problem is defined and a viable
+embedding method for character-level markers is identified.
+Depends on: capacity threshold research from component 0 and 1.
