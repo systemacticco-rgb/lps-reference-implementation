@@ -1,4 +1,6 @@
-export function generateManifest({ segments, signingTool, signedAt }) {
+import { createHash } from 'crypto';
+
+export function generateManifest({ visibleText, segments, signingTool, signedAt }) {
   const content_segments = segments.map((segment) => {
     const entry = {
       segment_id: segment.segmentId,
@@ -37,8 +39,11 @@ export function generateManifest({ segments, signingTool, signedAt }) {
   const overall_ai_proportion = totalCharCount === 0 ? 0 : Math.round((aiCharCount / totalCharCount) * 100) / 100;
   const human_proportion = totalCharCount === 0 ? 0 : Math.round((humanCharCount / totalCharCount) * 100) / 100;
 
+  const textHash = createHash('sha256').update(visibleText, 'utf8').digest('hex');
+
   return {
     lps_version: "0.1",
+    text_hash: textHash,
     content_segments,
     overall_ai_proportion,
     human_proportion,
