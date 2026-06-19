@@ -74,9 +74,16 @@ Fallback: Structured A.9 if manifest exceeds capacity constraint
 Constraint: embedding and extraction are separate functions
 Constraint: never modify content during embedding
 
+Extraction output format: object with properties manifest (Uint8Array),
+cleanText (string), offset (number), length (number).
+Comparison must target extracted.manifest, not extracted directly.
+
 Known limitation: Unicode variation selectors have data capacity ceiling.
 Complex manifests with many segments may require fallback method.
-Capacity threshold: [TO BE TESTED]
+Capacity threshold: [IN PROGRESS]
+First data point — June 2026, component 0:
+5-byte manifest occupies 26 Unicode characters after 37 visible characters.
+Full threshold ceiling requires testing with larger manifests.
 
 ---
 
@@ -135,6 +142,7 @@ These must be resolved before building the signing layer:
 - [ ] Signing algorithm selection
 - [ ] Key storage method for v0.1
 - [ ] Capacity threshold for Unicode variation selectors
+      [IN PROGRESS — first data point logged in section 4, June 2026]
 - [ ] Passing/failing/degraded output format
 
 ---
