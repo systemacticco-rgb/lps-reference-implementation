@@ -244,7 +244,7 @@ Requires verification tool update to deserialize CBOR on extraction.
 
 ---
 
-## 5. Verification Tool [DEFINED — commit pending]
+## 5. Verification Tool [DEFINED — commit 4 files, June 19 2026]
 Input: file or text string with embedded manifest
 Steps in order:
 1. Extract manifest from content
