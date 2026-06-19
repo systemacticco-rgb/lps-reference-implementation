@@ -87,6 +87,58 @@ Full threshold ceiling requires testing with larger manifests.
 
 ---
 
+## 4.1 Manifest Compression — Shortcode Dictionary [DEFINED — v0.1]
+
+All field names and origin values are shortened before embedding.
+The verification tool expands them using this dictionary.
+Dictionary is versioned and immutable — existing codes never change.
+New codes may be added in future versions only.
+
+### Field name codes — v0.1
+lv   = lps_version
+cs   = content_segments
+sid  = segment_id
+so   = start_offset
+eo   = end_offset
+or   = origin
+cf   = confidence
+ait  = ai_tool
+md   = modification_degree
+oaip = overall_ai_proportion
+hp   = human_proportion
+st   = signing_tool
+sa   = signed_at
+
+### Origin value codes — v0.1
+h    = human
+aig  = ai_generated
+aimh = ai_modified_human
+
+### Version identifier codes — v0.1
+lps-v0.1 = lps-reference-implementation-v0.1
+
+### Default field assumption [DEFINED]
+lv and st are omitted at embed time in v0.1.
+Verification tool assumes lps-v0.1 defaults if absent.
+If non-default values are present they override the assumption.
+This rule is a schema contract — both embedder and verifier must
+implement it. Defined in README.md section 3.2 as authoritative.
+
+### Confidence encoding [DEFINED]
+Confidence stored as integer 0-100, not float 0.0-1.0.
+Example: 0.95 stored as 95. Verification tool divides by 100
+on extraction for display purposes.
+Defined in README.md section 3.2 as authoritative.
+
+### v0.2 optimization — CBOR binary encoding [PLANNED]
+JSON serialization replaced with CBOR binary format.
+Drops quotes from keys, encodes numbers as binary not text digits.
+Estimated additional saving: 50-70% reduction in numeric field size.
+Do not implement until shortcode dictionary is tested in v0.1.
+Requires verification tool update to deserialize CBOR on extraction.
+
+---
+
 ## 5. Verification Tool [PLACEHOLDER]
 Input: file or text string with embedded manifest
 Steps in order:
