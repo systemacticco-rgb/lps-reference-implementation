@@ -38,3 +38,59 @@ legal framework design. Not a code problem at this stage.
 
 ### Connects to
 Hypothesis E (QR server-side binding) — same server-side trace logic.
+
+*/==================================================================
+==================================================================/*
+
+## PROPOSAL 002 — Server-Side Token Binding for Text Provenance
+Date: June 2026
+Status: OPEN — pending component 0 and component 1 completion
+
+### Origin
+Chilean public transit QR system. Screenshot of QR returns black
+screen — render-blocked at OS or app level. Bypass attempt still
+resulted in fare deduction, confirming the token was server-bound
+and user-specific independent of visual capture.
+
+### Plain terms
+The manifest is not only embedded in the text. At generation time,
+a unique token is registered server-side, bound to the specific
+output and the generating identity. If the embedded signal is
+stripped — by screenshot, copy-paste truncation, or any other
+method — the server-side token remains. A presented piece of content
+can be checked against the token registry to establish origin even
+when no embedded signal survives.
+
+### What this adds beyond the embedding layer
+The embedding layer (c2pa-text, Unicode variation selectors) survives
+copy-paste but not screenshot or OCR transcription. The server-side
+token survives all of those because it is not inside the content.
+It is a parallel record that exists independently of what happens
+to the content after delivery.
+
+### LPS architectural question
+Can the manifest generator register a token at signing time,
+not just embed a manifest in the text? If yes, verification has
+two independent paths: extract from content, or query the registry.
+Degraded signal becomes recoverable through the registry path.
+
+### Connects to
+PROPOSAL 001 — Notarization Registry. Same server-side infrastructure.
+Token binding and notarization are two functions of the same registry.
+Anti-forensic principle — stripping the embedded signal does not
+erase the server-side record. The act of stripping becomes detectable
+by comparing registry presence against embedded signal absence.
+SPEC.md section 6 — Server-Side Record Store.
+
+### v0.1 scope
+Out of scope for reference implementation.
+Required before working group submission.
+Architecture decision pending: foundation-hosted vs federated registry.
+
+### Open questions
+- Token format: hash of content only, or hash plus signer identity
+  plus timestamp combined?
+- Registry access: public lookup or credentialed only?
+- What happens when the same content is legitimately re-published
+  by a different party — does it get a new token or inherit the
+  original?
