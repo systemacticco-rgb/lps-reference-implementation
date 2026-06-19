@@ -94,6 +94,40 @@ https://github.com/systemacticco-rgb/linguistic-provenance-schema
 Schema changes happen in README.md first.
 SPEC.md and code follow. README.md is the authority.
 
+### What does the signing layer do to the manifest?
+The manifest generator produces a JSON object. It is plain
+readable text with no protection — anyone could open it and
+change a value. The signing layer seals it. It takes the manifest
+JSON, converts it to bytes, and passes it through ECDSA P-256
+using your private key. The output is a signature — a unique
+string that could only have been produced by combining that exact
+manifest with that exact private key. Change one byte in the
+manifest after signing and the signature no longer matches.
+Verification fails. The signing layer never touches the visible
+text. It only touches the manifest.
+
+### What are the two keys and what does each one do?
+Private key: signs the manifest. Only you have it. Never committed
+to GitHub. Never logged. Lives in .env file locally and in Vercel
+environment variables for deployment. Generated once using OpenSSL.
+Public certificate: verifies the signature. Anyone can have it.
+Committed to the repo. A verifier uses it to confirm the signature
+is valid without ever needing access to the private key.
+Two separate jobs. Two separate files. One never leaves your
+machine. The other is public by design.
+
+### What is the order of operations across all four components?
+1. Manifest generator produces JSON manifest from segment data.
+2. Signing layer signs that JSON using private key —
+   produces signed manifest.
+3. Embedding layer takes signed manifest and embeds it into
+   the text as invisible Unicode variation selectors.
+4. Verification tool extracts manifest from text, checks
+   signature against public certificate, renders breakdown.
+The text and the manifest are two separate things throughout.
+The signing layer sits between the manifest generator and the
+embedding layer. It seals the manifest before it enters the text.
+
 ---
 
 ## 3. Signing Layer [SECURITY-CRITICAL]
