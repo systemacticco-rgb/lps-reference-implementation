@@ -45,3 +45,59 @@ Not a build question. Do not open this research until after v0.1
 reference implementation is complete and working group engagement
 has begun. At that point this research informs the positioning
 conversation, not the technical architecture.
+
+
+
+
+
+## RESEARCH 002 — Legal Framework for Cross-Registry Access
+Date: June 2026
+Status: OPEN — regulatory and industry framework does not exist yet
+
+### The question
+What legal framework governs a third-party verification tool
+querying AI company notarization registries? Who grants access,
+under what conditions, and through what mechanism?
+
+### Why it matters for LPS
+The verification tool has two paths — embedded signal and registry.
+The embedded signal path requires no external access. The registry
+path requires querying records owned by AI companies or institutions.
+Without a defined access framework, the registry path only works
+against the LPS registry itself, not against external registries.
+
+### Current state
+No major AI company has a public notarization registry today.
+The question of access is currently theoretical. No registry exists
+to query. The framework needs to be defined before registries exist
+so that when they are built, access models are already established.
+
+### Three possible access models
+Model 1 — Public API. Open to anyone, no credentials.
+Precedent: Certificate Transparency logs.
+Model 2 — Credentialed API. Requires registration and terms agreement.
+Precedent: most commercial APIs.
+Model 3 — Restricted API. Requires legal authority.
+Precedent: law enforcement database requests.
+
+### For the forensic use case
+A judge using the verification tool would need Model 3 access
+to AI company registries. The tool submits a formal data request
+through whatever access mechanism regulation provides.
+The tool does not bypass access controls. It uses the official path.
+
+### LPS opportunity
+LPS can propose a cross-registry access standard as part of its
+working group submission. Proposing the framework before it exists
+positions LPS as infrastructure, not just a tool.
+
+### Where to research
+- EU AI Act provisions on data access and transparency obligations
+- Certificate Transparency RFC 6962 — public log access model
+- GDPR data access request framework — Article 15
+- Existing law enforcement API access frameworks
+
+### Status
+Do not resolve before working group engagement begins.
+This is a policy and regulatory question, not a build question.
+Bring it to the working group as an open proposal, not a solution.
