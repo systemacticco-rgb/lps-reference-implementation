@@ -38,20 +38,31 @@ then reflected in this implementation.
 
 ---
 
-## 3. Signing Layer [SECURITY-CRITICAL] [PLACEHOLDER]
-Algorithm: [TO BE DECIDED — candidate: Ed25519]
-Library: Node.js built-in crypto module
-Key format: [TO BE DECIDED]
+## 3. Signing Layer [SECURITY-CRITICAL]
+Algorithm: es256 (ECDSA P-256)
+Library: @contentauth/c2pa-node (c2pa-node-v2, v0.5.4, March 2026)
+Note: original c2pa-node deprecated September 2025 — do not use.
+Key format: PEM
 Certificate handling: self-signed for v0.1, CA-issued for production
-Constraint: never implement signing logic manually
-Constraint: key material never logged, never hardcoded
-Constraint: signing and verification are separate files,
-           separate functions, zero shared mutable state
 
-Open questions:
-- Which algorithm — Ed25519 vs ECDSA P-256?
-- Key storage for v0.1 proof of concept?
-- Self-signed certificate generation process?
+Key storage v0.1: environment variable via .env file,
+                  gitignored, never logged, never hardcoded.
+
+Certificate generation command:
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 \
+  -keyout private.pem -out cert.pem -days 365 -nodes \
+  -subj "/CN=lps-reference-implementation-v0.1"
+
+private.pem — gitignored, never committed.
+cert.pem — committed for v0.1 testing only.
+
+Constraints:
+- Never implement signing logic manually
+- Key material never logged, never hardcoded, never in client-accessible variables
+- Signing and verification are separate files, separate functions,
+  zero shared mutable state
+- SIGNING_ENABLED environment variable checked first in every
+  signing function before any key access
 
 ---
 
