@@ -36,6 +36,64 @@ Do not duplicate the schema here.
 Any schema changes must be made in the proposal repository first,
 then reflected in this implementation.
 
+## 2.1 Component Understanding — Read Before Building
+
+### What are the three origin types and what does each mean?
+Human: written entirely by a human, no AI involvement at any stage.
+AI generated: written entirely by an AI tool, no human wrote
+the original text.
+AI modified human: a human wrote it first, then an AI edited,
+rewrote, or transformed it. Both were involved. The modification
+degree field records how much the AI changed it — 0.1 means barely
+touched, 0.9 means almost completely rewritten.
+
+### What is a segment and what two pieces of information define
+its boundaries?
+A segment is one contiguous section of the text with a single
+origin type. It is described in the manifest by two coordinates
+— start_offset and end_offset — which are character position
+numbers pointing into the visible text. Start offset is the
+position of the first character of that section. End offset is
+the position of the last character. The text itself is untouched.
+The manifest holds the map.
+
+### What is the confidence field and what does 0.95 mean vs 0.60?
+The confidence field records how certain the system is about
+the origin classification assigned to that segment. 0.95 means
+95% confident — the signal was clear, the classification is
+strong. 0.60 means 60% confident — the signal was weak or
+ambiguous. For forensic contexts this matters significantly.
+A judge treats a segment classified as AI generated at 0.95
+differently from the same classification at 0.60.
+
+### What is overall_ai_proportion and where does it come from?
+The percentage of total content touched by AI in any way —
+either fully generated or modified. Calculated from segment
+boundaries: sum of characters in AI generated and AI modified
+human segments divided by total characters in the document.
+human_proportion is the inverse. Both are calculated automatically
+by the manifest generator from the segment data. They always
+add up to 1.0.
+
+### What does the manifest generator receive as input and
+what does it produce as output?
+Input: a list of segments each with start offset, end offset,
+origin type, AI tool identifier if relevant, modification degree
+if relevant, and confidence value. Plus signing tool name and
+timestamp.
+Output: one JSON object — the manifest — structured exactly
+according to the schema in README.md section 3.2.
+It does not sign anything. It does not embed anything.
+One job: structured input in, structured JSON out.
+
+### Where is the schema definition to follow before writing
+any code?
+README.md section 3.2 in the proposal repository:
+https://github.com/systemacticco-rgb/linguistic-provenance-schema
+#32-what-lps-records
+Schema changes happen in README.md first.
+SPEC.md and code follow. README.md is the authority.
+
 ---
 
 ## 3. Signing Layer [SECURITY-CRITICAL]
