@@ -151,6 +151,16 @@ rm private_raw.pem
 private.pem — gitignored, never committed.
 cert.pem — committed for v0.1 testing only.
 
+Certificate delivery — v0.1:
+cert.pem is not embedded in the manifest. It is hosted publicly at:
+https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem
+The manifest carries two fields instead:
+cert_url — the public URL of the certificate.
+cert_fingerprint — SHA-256 hash of the certificate content.
+The verification tool fetches the certificate, hashes it, confirms it
+matches cert_fingerprint, then uses it to verify the signature.
+Repo: systemacticco-rgb/lps-certificates (public)
+
 Constraints:
 - Never implement signing logic manually
 - Key material never logged, never hardcoded, never in client-accessible variables
@@ -185,10 +195,23 @@ Comparison must target extracted.manifest, not extracted directly.
 
 Known limitation: Unicode variation selectors have data capacity ceiling.
 Complex manifests with many segments may require fallback method.
-Capacity threshold: [IN PROGRESS]
-First data point — June 2026, component 0:
+Capacity threshold: [DEFINED — June 2026]
+First data point — component 0:
 5-byte manifest occupies 26 Unicode characters after 37 visible characters.
-Full threshold ceiling requires testing with larger manifests.
+
+Production measurement — 5-segment manifest after full compression pipeline:
+Raw JSON with certificate:              2026 bytes
+After certificate removal:              1219 bytes
+After shortcode compression:             843 bytes
+After CBOR encoding:                     737 bytes
+Ceiling:                                 256 bytes
+
+Conclusion: 256-byte ceiling is a per-complexity constraint.
+2-3 segment manifests approach feasibility with further optimization.
+4+ segment manifests require the fallback method (Structured A.9).
+Fallback trigger: compressed manifest exceeds 220 bytes (safety margin).
+Remaining optimization target: cert_url shortcode registry — drops
+78-byte URL to 3-4 bytes. Reserved for v0.2.
 
 ---
 
