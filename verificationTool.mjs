@@ -84,7 +84,21 @@ export async function verifyManifest(embeddedText) {
       status: 'failed',
       reason: 'Visible text was modified after signing — content hash does not match',
       signed_at: signedManifest.signed_at ?? null,
-      algorithm: signedManifest.algorithm ?? null
+      algorithm: signedManifest.algorithm ?? null,
+      original_manifest: {
+        signed_at: signedManifest.signed_at ?? null,
+        overall_ai_proportion: signedManifest.manifest.overall_ai_proportion ?? null,
+        human_proportion: signedManifest.manifest.human_proportion ?? null,
+        segments: signedManifest.manifest.content_segments.map(segment => ({
+          segment_id: segment.segment_id,
+          origin: segment.origin,
+          confidence: segment.confidence,
+          start_offset: segment.start_offset,
+          end_offset: segment.end_offset,
+          ai_tool: segment.ai_tool ?? null,
+          modification_degree: segment.modification_degree ?? null
+        }))
+      }
     };
   }
 

@@ -185,7 +185,8 @@ tools.
 Library: encypherai/c2pa-text (MIT licensed)
 Method for v0.1: Unstructured A.8 — Unicode Variation Selectors
 Reason: survives copy-paste, sufficient for proof of concept
-Fallback: Structured A.9 if manifest exceeds capacity constraint
+Fallback: Structured A.9 if compressed CBOR byte count exceeds
+220 bytes. Trigger implemented in embeddingLayer.mjs.
 Constraint: embedding and extraction are separate functions
 Constraint: never modify content during embedding
 
@@ -212,6 +213,21 @@ Conclusion: 256-byte ceiling is a per-complexity constraint.
 Fallback trigger: compressed manifest exceeds 220 bytes (safety margin).
 Remaining optimization target: cert_url shortcode registry — drops
 78-byte URL to 3-4 bytes. Reserved for v0.2.
+
+Fallback method: Structured A.9 (interleaved invisible markers)
+Trigger: compressed CBOR byte count exceeds 220 bytes
+Trigger threshold chosen to maintain 36-byte safety margin
+below the 256-byte variation selector ceiling.
+
+Structured A.9 distributes invisible payload markers throughout
+the document at defined positions rather than appending one block
+at the end. Capacity scales with document length. Not subject to
+the 256-byte ceiling. Handles multi-segment and multi-round
+provenance manifests.
+
+Detection: extractManifest from c2pa-text detects method
+automatically. No flag required in the manifest.
+Verification tool requires no changes for A.9 support.
 
 ---
 
