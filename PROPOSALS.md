@@ -265,56 +265,374 @@ forensic evidence.
 
 ## PROPOSAL 002 — Server-Side Token Binding for Text Provenance
 Date: June 2026
-Status: OPEN — pending component 0 and component 1 completion
+Status: OPEN — architecture defined, not built
 
-### Origin
-Chilean public transit QR system. Screenshot of QR returns black
-screen — render-blocked at OS or app level. Bypass attempt still
-resulted in fare deduction, confirming the token was server-bound
-and user-specific independent of visual capture.
+═══════════════════════════════════════════
+ORIGIN
+═══════════════════════════════════════════
 
-### Plain terms
-The manifest is not only embedded in the text. At generation time,
-a unique token is registered server-side, bound to the specific
-output and the generating identity. If the embedded signal is
-stripped — by screenshot, copy-paste truncation, or any other
-method — the server-side token remains. A presented piece of content
-can be checked against the token registry to establish origin even
-when no embedded signal survives.
+Chilean public transit QR system. The system issues a QR code
+as a fare token. Users attempted to bypass payment by
+screenshotting the QR and reusing it. The system implemented
+two countermeasures:
 
-### What this adds beyond the embedding layer
-The embedding layer (c2pa-text, Unicode variation selectors) survives
-copy-paste but not screenshot or OCR transcription. The server-side
-token survives all of those because it is not inside the content.
-It is a parallel record that exists independently of what happens
-to the content after delivery.
+Countermeasure 1 — Screenshot blocking. The QR is rendered
+in a hardware-backed protected display surface. Screenshot
+returns a black screen. The QR never enters the capturable
+display layer.
 
-### LPS architectural question
-Can the manifest generator register a token at signing time,
-not just embed a manifest in the text? If yes, verification has
-two independent paths: extract from content, or query the registry.
-Degraded signal becomes recoverable through the registry path.
+Countermeasure 2 — Server-side token binding. Even when the
+screenshot bypass succeeded, the fare was still deducted.
+The QR is not the fare. It is a pointer to a server-side
+record bound to a specific user identity. When scanned —
+regardless of how the visual was obtained — the server
+finds the record, identifies the bound identity, and
+charges the correct account. The visual representation
+is irrelevant. The server-side binding is what matters.
 
-### Connects to
-PROPOSAL 001 — Notarization Registry. Same server-side infrastructure.
-Token binding and notarization are two functions of the same registry.
-Anti-forensic principle — stripping the embedded signal does not
-erase the server-side record. The act of stripping becomes detectable
-by comparing registry presence against embedded signal absence.
-SPEC.md section 6 — Server-Side Record Store.
+Both countermeasures map directly to LPS. This proposal
+defines how.
 
-### v0.1 scope
+═══════════════════════════════════════════
+THE CORE PROBLEM THIS PROPOSAL SOLVES
+═══════════════════════════════════════════
+
+The embedded LPS manifest survives copy-paste. It does not
+survive screenshot. A user who wants to present AI-generated
+content as human-written has one reliable bypass: screenshot
+the text, use OCR — iPhone Live Text, Google Lens, any
+equivalent — to convert the image back to plain text. The
+output is clean text with zero invisible characters. Every
+embedded signal is gone.
+
+No cryptographic mechanism can prevent this at the content
+level. The content is visible on screen. Any visible content
+can be photographed. Any photograph of text can be converted
+back to text by OCR. This is an architectural constraint, not
+a solvable technical problem at the embedding layer.
+
+PROPOSAL 002 addresses this through three independent layers
+that together make the bypass detectable even when it succeeds.
+
+═══════════════════════════════════════════
+LAYER 1 — PLATFORM ENFORCEMENT
+Screenshot blocking on native implementations
+═══════════════════════════════════════════
+
+On native mobile applications — iOS and Android — the AI
+tool renders generated content in a hardware-backed protected
+display surface. The operating system marks this surface as
+non-capturable.
+
+On iOS: UIScreen.isCaptured detection combined with rendering
+sensitive content in a UITextField with isSecureTextEntry
+or a protected UIView subclass. The screenshot compositor
+cannot access the protected surface. Screenshot returns black.
+
+On Android: FLAG_SECURE applied to the window containing
+generated content. Android's screenshot system respects
+this flag and excludes the protected window from capture.
+Screenshot returns black for that portion of the screen.
+
+The user cannot screenshot the generated text. The only way
+to extract the text is through the app's own export mechanism.
+That mechanism re-embeds the LPS signal on every copy or
+export operation. The signal cannot be bypassed through
+screenshot because screenshot returns nothing.
+
+What this does not prevent:
+A second physical device photographing the screen of the first.
+This is unblockable at the software level. It raises friction
+significantly — the attack requires physical access to a
+second device and produces an image, not text, which requires
+additional OCR processing. The casual bypass is closed.
+The determined bypass still exists but is detectable through
+the server-side layers below.
+
+Applicability:
+Native mobile apps only. Web browsers do not have access to
+hardware-backed secure display surfaces. A website cannot
+prevent a browser screenshot. Claude's web interface cannot
+implement this protection. A native LPS-compliant app can.
+
+═══════════════════════════════════════════
+LAYER 2 — SERVER-SIDE TOKEN BINDING
+The token that cannot be stripped
+═══════════════════════════════════════════
+
+At the moment AI content is generated and delivered, the
+generating system registers the content with the LPS registry
+and receives a token. That token is bound server-side to
+three things:
+
+content_hash    — SHA-256 fingerprint of the generated content
+generating_id   — identifier of the AI tool and account that
+                  produced the content
+created_at      — server-side timestamp, not client-supplied
+
+These three combined produce the token:
+
+```javascript
+import { createHash, randomBytes } from 'crypto';
+
+// Token is cryptographically random — not derived from inputs
+// The binding is stored server-side, not computable from the token
+const token = 'lps_' + randomBytes(16).toString('hex');
+
+// Registry record stores the binding
+await registry.insert({
+  token,
+  content_hash: sha256(content),
+  generating_id: aiToolIdentifier,
+  created_at: new Date().toISOString()
+});
+```
+
+The token is embedded in the document alongside the LPS
+manifest — compressed and CBOR-encoded, invisible to the reader.
+
+WHY THE TOKEN CANNOT BE STRIPPED EFFECTIVELY:
+
+Stripping the embedded signal removes the token from the
+document. But the server-side record exists permanently
+and independently of what happens to the document. The
+registry does not know or care that the signal was stripped.
+The binding between the content hash, the generating identity,
+and the timestamp exists in the registry regardless.
+
+When the content is later hashed — by a court, a regulator,
+a journalist, a verification tool — the hash matches the
+registry record. The generating identity is in that record.
+The stripping accomplished nothing forensically.
+
+This is the direct equivalent of the Chilean transit system:
+the QR was screenshotted and the visual was stripped of its
+meaning, but the server-side record still charged the correct
+account because the binding was server-side, not in the visual.
+
+TWO DOCUMENTS, SAME CONTENT, DIFFERENT IDENTITIES:
+
+If the same content is generated by two different AI tools
+or accounts, they produce different tokens and different
+registry records — different generating_id values. The
+verification tool reports both records. The forensic picture
+is: this exact content was generated by two different
+entities at two different times. Each registration is
+independently attributable.
+
+═══════════════════════════════════════════
+LAYER 3 — USAGE TRACKING
+The signal that fires at verification time
+═══════════════════════════════════════════
+
+Every time content is submitted to a verification tool,
+that event is logged in the registry alongside the
+generation record.
+
+GENERATION EVENT — written once at creation:
+token:          lps_a7f3c9e2b4d1f8a3c6e9b2d5f0a3c7e1
+
+content_hash:   e3b0c44298fc1c149afbf4c8996fb924...
+
+generating_id:  claude-sonnet-4 / account_xyz
+
+created_at:     2026-06-20T10:00:00Z
+
+USAGE EVENTS — written at every verification query:
+
+oken:          lps_a7f3c9e2b4d1f8a3c6e9b2d5f0a3c7e1
+
+queried_at:     2026-07-15T14:32:00Z
+
+queried_by:     court-verification-tool / case_ref_abc
+
+query_type:     token  (or: hash_fallback)
+
+The usage timeline becomes forensic evidence alongside
+the generation record. A court can see: this content was
+generated at time X. It was first submitted for verification
+at time Y by a court officer. Nobody submitted it for
+verification between generation and the court query. The
+person who held the content in that window made no attempt
+to verify it through official channels.
+
+HOW THE SIGNAL FIRES WITHOUT THE EMBEDDED TOKEN:
+
+If the embedded signal was stripped — screenshot, OCR, manual
+removal — the verification tool has no token to extract.
+It returns degraded. But it also computes a content hash
+and queries the registry by hash. This is the hash fallback
+path from PROPOSAL 001.
+
+query_type: hash_fallback
+
+content_hash: e3b0c44298fc1c149afbf4c8996fb924...
+
+The registry finds the generation record by content hash.
+Returns the token, the generating identity, and the
+creation timestamp. Logs the usage event. The bypass
+is detected and recorded — not prevented, but documented.
+
+THE FORENSIC GAP:
+
+The most powerful forensic signal is the absence of usage
+events between generation and a mandatory checkpoint.
+
+Content is generated. Signal is stripped. Content is used
+as if human-written. No verification queries are made by
+the person using it — because verification would expose
+the stripping. A court later queries the content. The
+registry shows:
+
+Generation:  2026-06-20T10:00:00Z
+First query: 2026-07-15T14:32:00Z  (court officer)
+Gap:         25 days, zero voluntary verification events
+
+This gap does not prove the signal was deliberately stripped.
+It is forensic evidence that contributes to a larger picture
+— the same way the absence of fingerprints at a crime scene
+contributes to an investigation without being conclusive alone.
+
+═══════════════════════════════════════════
+HOW THE THREE LAYERS WORK TOGETHER
+═══════════════════════════════════════════
+
+Layer 1 alone — closes the casual screenshot bypass on
+native apps. The determined attacker uses a second device.
+Signal stripped. Content used without provenance.
+
+Layer 2 alone — the registry binding exists. The content
+hash matches the generation record. Generating identity
+confirmed when queried. But no mandatory checkpoint forces
+the query to happen.
+
+Layer 3 alone — usage events logged when verification runs.
+But if nobody runs verification, no usage events exist.
+
+All three together:
+Layer 1 prevents the casual bypass.
+Layer 2 makes the bypass detectable when content is queried.
+Layer 3 creates a forensic record of when and by whom
+the content was verified — and when it was not.
+
+The law provides what the technology cannot: mandatory
+verification checkpoints. Court submission, regulatory
+filing, publication under disclosure requirements — these
+are the turnstiles. LPS is what the turnstile checks.
+The registry is what the turnstile records.
+
+═══════════════════════════════════════════
+WHAT THIS ADDS BEYOND PROPOSAL 001
+═══════════════════════════════════════════
+
+PROPOSAL 001 — passive registry. Records existence and time.
+Nobody has to do anything for the record to exist. No usage
+tracking. No identity binding.
+
+PROPOSAL 002 — active registry. Records existence, time,
+generating identity, and every verification event. The token
+binding makes attribution specific — not just "this content
+existed" but "this specific AI tool generated this content
+for this specific account." Usage tracking makes the forensic
+timeline complete — generation, verification history, gaps.
+
+Together they produce a system where:
+- Generation is attributed and timestamped
+- Every verification event is logged
+- Gaps in verification history are detectable
+- Stripping the signal does not erase the attribution
+- The bypass can succeed technically and still fail forensically
+
+═══════════════════════════════════════════
+VERIFICATION FLOW — STEP BY STEP
+═══════════════════════════════════════════
+
+Path A — embedded signal survived:
+1. Verification tool extracts token from embedded signal
+2. Queries registry: GET /registry/record?token=lps_a7f3c9...
+3. Registry returns: content_hash, generating_id, created_at
+4. Registry logs usage event: token, queried_at, queried_by
+5. Verification tool hashes received document
+6. Compares computed hash against registry content_hash
+7. If match: verified — attribution and timestamp confirmed
+8. If no match: failed — content modified after registration
+
+Path B — signal stripped, hash fallback:
+1. Verification tool finds no embedded signal
+2. Returns degraded — logs attempt
+3. Computes content hash from received document
+4. Queries registry: GET /registry/record?hash=e3b0c4...
+5. Registry returns: token, generating_id, created_at
+6. Registry logs usage event: hash_fallback, queried_at
+7. Verification tool returns registry_required state with
+   full registry record — generating identity, timestamp,
+   confirmation that signal was stripped
+
+═══════════════════════════════════════════
+OPEN QUESTIONS FOR WORKING GROUP
+═══════════════════════════════════════════
+
+1. Generating identity format
+   What constitutes a generating_id. AI tool name only.
+   AI tool plus account identifier. API key hash. Each
+   level of specificity has different privacy implications
+   and different forensic value.
+
+2. Usage event privacy
+   Usage events log who queried and when. Tier 1 public
+   queries — anyone checking content — create a surveillance
+   surface. A reader checking whether an article is
+   AI-generated creates a log entry. Whether that log
+   entry should be retained, for how long, and who can
+   access it is a policy question requiring working group
+   and legal input.
+
+3. Second-device bypass
+   Layer 1 screenshot blocking does not prevent a second
+   physical device photographing the screen. Whether any
+   technical countermeasure exists for this — or whether
+   it is accepted as an irreducible residual risk — requires
+   working group input.
+
+4. Mandatory checkpoint definition
+   The legal checkpoint — court submission, regulatory
+   filing — creates the forced usage event. Which contexts
+   constitute mandatory checkpoints under EU AI Act Article
+   50 and the August 2026 Code of Practice is a regulatory
+   question, not a technical one.
+
+5. Token revocation and usage event handling
+   If a generation record is revoked — content published
+   in error, legal hold — existing usage events reference
+   a revoked record. How the verification tool presents
+   a revoked record with existing usage history is undefined.
+
+═══════════════════════════════════════════
+v0.1 SCOPE
+═══════════════════════════════════════════
+
 Out of scope for reference implementation.
-Required before working group submission.
-Architecture decision pending: foundation-hosted vs federated registry.
+Shares infrastructure with PROPOSAL 001 — same registry,
+additional fields and usage event logging.
+registry_required state in verificationTool.mjs is the
+entry point for this proposal when implemented.
+Layer 1 screenshot blocking requires native mobile app
+development — separate from the Node.js reference
+implementation.
 
-### Open questions
-- Token format: hash of content only, or hash plus signer identity
-  plus timestamp combined?
-- Registry access: public lookup or credentialed only?
-- What happens when the same content is legitimately re-published
-  by a different party — does it get a new token or inherit the
-  original?
+═══════════════════════════════════════════
+CONNECTS TO
+═══════════════════════════════════════════
+
+PROPOSAL 001 — Notarization Registry. Shared infrastructure.
+PROPOSAL 004 — AI Input Verification. Token binding confirms
+legitimate provenance of invisible data in received content.
+RESEARCH 002 — Cross-Registry Legal Access Framework.
+SPEC.md section 6 — Server-Side Record Store.
+Anti-forensic principle — signal stripping detectable through
+registry gap analysis.
+EU AI Act Article 50 — mandatory disclosure requirement that
+creates the legal checkpoint this proposal depends on.
 
 ## PROPOSAL 003 — Character-Level Provenance Binding
 Date: June 2026
