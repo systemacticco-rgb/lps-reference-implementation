@@ -319,10 +319,49 @@ Constraint: certificate revocation check is mandatory,
 
 ---
 
-## 6. Server-Side Record Store [PLACEHOLDER — component 4]
-Architecture decision pending: foundation-hosted vs federated
-Not required for v0.1 proof of concept
-Required before working group submission
+## 6. Server-Side Record Store [ASSESSED — deferred to post-v0.1]
+Architecture defined in PROPOSALS.md PROPOSAL 001.
+Not built in v0.1 reference implementation.
+Required before working group submission.
+
+### What it is
+An append-only server-side log. Every AI-generated output gets
+a hash plus timestamp written at generation time. Content is
+not stored — only the fingerprint. A presented document can
+be checked against this log to confirm it existed, unchanged,
+at a specific moment.
+
+### Access model
+Tiered read access. Not public. Read access requires
+credentialed authority — legal, governmental, or institutional.
+Consumer layer has no access. This is intentional.
+
+### Forensic value
+The only verification layer that survives transcription,
+screenshot, and signal stripping. Not proof of authorship.
+Corroborating forensic evidence for legal proceedings.
+
+### Why it is deferred
+Hash must be written at generation time, server-side, by the
+model provider. Cannot be retrofitted by a third party.
+Google, Anthropic, OpenAI, Meta must integrate this at the
+generation layer. Adoption requires regulatory mandate or
+voluntary commitment from providers.
+
+### Architecture decision pending
+Foundation-hosted vs federated registry.
+PROPOSAL 002 — token binding — shares this infrastructure.
+Decision deferred to working group engagement phase.
+
+### v0.1 scope
+Out of scope. Supabase append-only table is technically
+buildable now. Credentialed access layer requires institutional
+relationships and legal framework design.
+
+### Connects to
+PROPOSAL 001 — Notarization Registry
+PROPOSAL 002 — Server-Side Token Binding
+RESEARCH 002 — Legal Framework for Cross-Registry Access
 
 ---
 
@@ -358,7 +397,24 @@ These must be resolved before building the signing layer:
 - [ ] Capacity threshold for Unicode variation selectors
       [IN PROGRESS — first data point logged in section 4, June 2026]
 - [ ] Passing/failing/degraded output format —  DEFINED, JSON, four states
-
+- [ ] Certificate rotation procedure
+      v0.1 certificate expires 365 days from generation.
+      Procedure for rotating to a new certificate without
+      breaking verification of documents signed with the
+      old one is not defined. Requires: new cert generation,
+      new lps-certificates repo commit, new cert_url and
+      cert_fingerprint in signingLayer.mjs, decision on
+      whether old signed documents remain verifiable.
+      [OPEN — pre-working-group-submission item]
+- [ ] Multi-round provenance architecture
+      Sequential signing rounds — human draft, AI edit,
+      human revision — produce multiple signed manifests.
+      How the verification tool handles a document that
+      has been through multiple signing cycles is not
+      defined. Requires: ingredient chain architecture
+      decision, chain depth limit, poisoned chain detection.
+      References: SPEC.md [H1], [H2], [H3] from proposal repo.
+      [OPEN — post-v0.1, pre-working-group-submission]
 ---
 
 ## 10. Change Log
