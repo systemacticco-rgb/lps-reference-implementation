@@ -201,6 +201,7 @@ New codes may be added in future versions only.
 
 ### Field name codes — v0.1
 lv   = lps_version
+th   = text_hash
 cs   = content_segments
 sid  = segment_id
 so   = start_offset
@@ -213,6 +214,11 @@ oaip = overall_ai_proportion
 hp   = human_proportion
 st   = signing_tool
 sa   = signed_at
+m    = manifest
+sig  = signature
+cu   = cert_url
+cfp  = cert_fingerprint
+alg  = algorithm
 
 ### Origin value codes — v0.1
 h    = human
