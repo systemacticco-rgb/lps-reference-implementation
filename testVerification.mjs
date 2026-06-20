@@ -18,11 +18,13 @@ const manifest = generateManifest({
 const signedManifest = signManifest(manifest);
 const embeddedText = embedManifest(visibleText, signedManifest);
 
+(async () => {
 console.log('--- Verification result ---');
-const result = verifyManifest(embeddedText);
+const result = await verifyManifest(embeddedText);
 console.log(JSON.stringify(result, null, 2));
 
 console.log('--- Adversarial test: tampered text ---');
 const tamperedText = embeddedText + " TAMPERED";
-const tamperedResult = verifyManifest(tamperedText);
+const tamperedResult = await verifyManifest(tamperedText);
 console.log(JSON.stringify(tamperedResult, null, 2));
+})();

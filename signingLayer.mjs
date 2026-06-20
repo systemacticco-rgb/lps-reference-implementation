@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { createSign, createVerify } from 'crypto';
+import { createSign, createVerify, createHash } from 'crypto';
 
 export function signManifest(manifest) {
   let privateKey;
@@ -27,10 +27,13 @@ export function signManifest(manifest) {
 
     const signature = signer.sign(privateKey, 'base64');
 
+    const certFingerprint = createHash('sha256').update(certificate, 'utf8').digest('hex');
+
     return {
       manifest,
       signature,
-      certificate,
+      cert_url: 'https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem',
+      cert_fingerprint: certFingerprint,
       algorithm: 'es256',
       signed_at: new Date().toISOString()
     };

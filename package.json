@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@contentauth/c2pa-node": "^0.5.5",
-    "c2pa-text": "^3.0.0"
+    "c2pa-text": "^3.0.0",
+    "cbor": "^10.0.12"
   }
 }
