@@ -1,7 +1,8 @@
 import { extractManifest } from 'c2pa-text';
 import { createVerify, createHash } from 'crypto';
+import { decompress, decodeFromCBOR } from './compression.mjs';
 
-export function verifyManifest(embeddedText) {
+export async function verifyManifest(embeddedText) {
 
   // STEP 1 — Extract manifest bytes from embedded text
   let extracted;
@@ -26,8 +27,8 @@ export function verifyManifest(embeddedText) {
   // STEP 2 — Decode bytes back to signed manifest object
   let signedManifest;
   try {
-    const decoded = new TextDecoder().decode(extracted.manifest);
-    signedManifest = JSON.parse(decoded);
+    const raw = decodeFromCBOR(extracted.manifest);
+    signedManifest = decompress(raw);
   } catch {
     return {
       status: 'degraded',
@@ -35,18 +36,31 @@ export function verifyManifest(embeddedText) {
     };
   }
 
-  // STEP 3 — Verify signature against public certificate
+
+  // STEP 3 — Fetch certificate, verify fingerprint, verify signature
   let signatureValid;
+  let certificate;
   try {
+    const response = await fetch(signedManifest.cert_url);
+    certificate = await response.text();
+
+    const fetchedFingerprint = createHash('sha256').update(certificate, 'utf8').digest('hex');
+    if (fetchedFingerprint !== signedManifest.cert_fingerprint) {
+      return {
+        status: 'failed',
+        reason: 'Certificate fingerprint mismatch — fetched certificate does not match manifest record'
+      };
+    }
+
     const manifestBuffer = Buffer.from(JSON.stringify(signedManifest.manifest), 'utf8');
     const verifier = createVerify('SHA256');
     verifier.update(manifestBuffer);
     verifier.end();
-    signatureValid = verifier.verify(signedManifest.certificate, signedManifest.signature, 'base64');
+    signatureValid = verifier.verify(certificate, signedManifest.signature, 'base64');
   } catch {
     return {
       status: 'failed',
-      reason: 'Signature verification process threw an error — certificate or signature may be malformed'
+      reason: 'Certificate fetch or signature verification failed — check network or certificate URL'
     };
   }
 

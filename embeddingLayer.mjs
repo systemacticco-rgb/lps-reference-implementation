@@ -1,9 +1,9 @@
 import { embedManifest as embedIntoText } from 'c2pa-text';
+import { compress, encodeToCBOR } from './compression.mjs';
 
 export function embedManifest(visibleText, signedManifest) {
   try {
-    const manifestString = JSON.stringify(signedManifest);
-    const manifestBytes = new TextEncoder().encode(manifestString);
+    const manifestBytes = encodeToCBOR(compress(signedManifest));
 
     return embedIntoText(visibleText, manifestBytes);
   } catch {
