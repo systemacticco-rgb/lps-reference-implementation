@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@contentauth/c2pa-node": "^0.5.5",
+    "@supabase/supabase-js": "^2.108.2",
     "c2pa-text": "^3.0.0",
-    "cbor": "^10.0.12"
+    "cbor": "^10.0.12",
+    "dotenv": "^17.4.2"
   }
 }

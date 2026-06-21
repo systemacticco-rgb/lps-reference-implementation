@@ -1,6 +1,7 @@
 import { extractManifest } from 'c2pa-text';
 import { createVerify, createHash } from 'crypto';
 import { decompress, decodeFromCBOR } from './compression.mjs';
+import { queryRegistry } from './registryClient.mjs';
 
 export async function verifyManifest(embeddedText) {
 
@@ -17,6 +18,22 @@ export async function verifyManifest(embeddedText) {
   }
 
   if (!extracted || !extracted.manifest) {
+    const contentHash = createHash('sha256').update(embeddedText, 'utf8').digest('hex');
+    const registryRecord = await queryRegistry({ contentHash });
+
+    if (registryRecord) {
+      return {
+        status: 'registry_required',
+        reason: 'No embedded signal found — provenance record exists in registry',
+        registry_record: {
+          token: registryRecord.token,
+          content_hash: registryRecord.content_hash,
+          generating_id: registryRecord.generating_id,
+          created_at: registryRecord.created_at
+        }
+      };
+    }
+
     return {
       status: 'degraded',
       reason: 'No embedded signal found in input text',
