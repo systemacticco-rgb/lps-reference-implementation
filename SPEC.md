@@ -310,8 +310,11 @@ Output — failed: signal found but signature invalid, or visible
 Output — degraded: signal absent or corrupted. Returns: status,
   reason, anti_forensic_note.
 
-Output — registry_required: not implemented in v0.1.
-  Architecture defined in PROPOSALS.md PROPOSAL 001.
+Output — registry_required: signal absent, registry lookup
+  succeeded. Returns: status, reason, registry_record with
+  token, content_hash, generating_id, created_at.
+  Implemented in v0.1 stub — registryClient.mjs.
+  Full production architecture: PROPOSALS.md PROPOSAL 001.
 
 Constraint: verification never modifies the input
 Constraint: certificate revocation check is mandatory,
@@ -354,9 +357,14 @@ PROPOSAL 002 — token binding — shares this infrastructure.
 Decision deferred to working group engagement phase.
 
 ### v0.1 scope
-Out of scope. Supabase append-only table is technically
-buildable now. Credentialed access layer requires institutional
-relationships and legal framework design.
+Stub implemented — June 21 2026.
+Two Supabase tables: registry_records and usage_events.
+registryClient.mjs: registerContent() and queryRegistry().
+verificationTool.mjs: registry_required state wired to
+queryRegistry() via content hash fallback.
+RLS disabled in stub — service role key is the access boundary.
+RLS policies and credentialed access layer deferred to
+production deployment phase.
 
 ### Connects to
 PROPOSAL 001 — Notarization Registry
@@ -380,13 +388,55 @@ These apply to every component without exception:
 
 ---
 
-## 8. Test Requirements [PLACEHOLDER]
-Each component requires:
-- Unit test for expected input
-- Unit test for malformed input
-- Unit test for adversarial input (tampered manifest,
-  invalid signature, stripped signal)
-- Output must be deterministic for identical inputs
+## 8. Test Requirements [DEFINED — v0.1 complete]
+Each component has a dedicated test file.
+All tests pass as of June 20 2026.
+
+### Test files
+testManifest.mjs — Component 1
+  Confirms: manifest structure, text_hash field present,
+  three origin types correct, proportions calculated,
+  all fields match schema in README.md section 3.2.
+
+testSigning.mjs — Component 2
+  Confirms: signed manifest object structure, signature
+  present, cert_url and cert_fingerprint present,
+  algorithm correct, signed_at timestamp present.
+
+testEmbedding.mjs — Component 3
+  Confirms: visible text unchanged after embedding,
+  manifest bytes extractable, manifest recoverable
+  from CBOR bytes after decompression.
+
+testVerification.mjs — Component 4
+  Confirms: verified state on clean text, failed state
+  on tampered text, original_manifest returned on
+  text hash mismatch.
+
+testRegistry.mjs — registryClient.mjs
+  Confirms: registerContent() generates correct token format,
+  queryRegistry() by token returns correct record,
+  queryRegistry() by content hash returns correct record,
+  unknown token returns null, missing arguments throws error.
+
+testRegistryVerification.mjs — registry_required state
+  Confirms: registry_required state fires when text has no
+  embedded signal but content hash exists in registry,
+  degraded state fires when text has no signal and no
+  registry record.
+
+### Adversarial test coverage
+Tampered visible text — returns failed with original_manifest.
+Certificate fingerprint mismatch — returns failed.
+Missing signal — returns degraded with anti_forensic_note.
+Corrupted signal — returns degraded.
+
+### Outstanding test gaps
+- Malformed CBOR input to verificationTool.mjs
+- A.9 structured embedding path — not yet tested in isolation
+- Certificate fetch failure — network unavailable scenario
+- Chain depth test — not applicable until multi-round
+  provenance is implemented
 
 ---
 
@@ -418,4 +468,10 @@ These must be resolved before building the signing layer:
 ---
 
 ## 10. Change Log
+v0.1-draft ## 10. Change Log
 v0.1-draft — June 2026 — skeleton created
+v0.1-registry-stub — June 21 2026 — registry stub implemented.
+  Added: registryClient.mjs, testRegistry.mjs,
+  testRegistryVerification.mjs. Updated: verificationTool.mjs
+  registry_required state wired. Supabase tables created:
+  registry_records, usage_events. All six tests passing.— June 2026 — skeleton created
