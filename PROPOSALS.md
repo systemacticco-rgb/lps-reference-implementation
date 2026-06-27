@@ -799,3 +799,73 @@ PROPOSAL 001 — Notarization Registry
 Section 4 — Embedding Layer
 Section 8 — outstanding test gap: A.9 structured embedding
   path not yet tested in isolation
+
+  PROPOSAL 005 — Redundant Embedding with Anchor Layer
+
+Status: proposed — post-v0.1
+
+Problem:
+A.9 distributes one manifest as dependent sequential fragments.
+Partial copy by the user destroys the payload if any fragment
+is missing. No reconstruction is possible from partial fragments.
+
+Proposed architecture — two layers:
+
+Layer 1 — Anchor manifest
+A minimal manifest containing document-level fields only:
+text_hash, overall_ai_proportion, human_proportion,
+algorithm, signed_at. No segment array. No signature.
+Embedded using A.8 at the start of the document and
+repeated at each paragraph boundary.
+Purpose: survive short copies, provide document fingerprint
+and proportion summary independently of the full manifest.
+Size: fits within A.8 ceiling by design — segment array
+is the primary size driver and is absent here.
+
+Layer 2 — Redundant full manifests
+Three or more complete copies of the full signed manifest
+embedded using A.9 at defined positions: document start,
+document middle, document end. Each copy independently
+extractable. Verifier attempts each position in order
+and uses first valid complete copy found.
+Purpose: increase survival odds across partial copies.
+Majority vote rule if copies conflict — two of three
+intact copies take precedence over one corrupted copy.
+
+Reconstruction mechanism
+Each A.9 chunk carries a positional header: sequence number
+and total chunk count. Format: [seq: uint16, total: uint16]
+prepended to each chunk payload. Adds 4 bytes per chunk.
+Enables surviving fragments from a damaged copy to be
+identified and reconstructed using fragments from intact
+copies at matching sequence positions.
+This is a partial erasure recovery mechanism — not full
+erasure coding. Reconstruction succeeds when at least one
+copy is intact. It does not guarantee reconstruction from
+fragments alone.
+
+Forensic value
+Even when full reconstruction fails, surviving anchor
+manifests at paragraph boundaries provide:
+- text_hash at generation time
+- overall_ai_proportion and human_proportion
+- signing timestamp and algorithm
+This is sufficient for a forensic report to establish
+document-level provenance without segment-level detail.
+
+Constraints
+- Anchor manifest is not cryptographically signed in v0.1.
+  Signing the anchor requires a separate signing pass.
+  Deferred to v0.2.
+- Reconstruction logic requires verificationTool.mjs update.
+- Positional header format must be added to compression.mjs
+  before A.9 chunk generation.
+- Total embedded payload size with three full copies plus
+  anchor manifests must be profiled against document length
+  before implementation.
+
+Connects to
+PROPOSAL 001 — Notarization Registry
+Section 4 — Embedding Layer
+Section 8 — outstanding test gap: A.9 structured embedding
+  path not yet tested in isolation
