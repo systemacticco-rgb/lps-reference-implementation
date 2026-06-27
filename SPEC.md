@@ -344,6 +344,14 @@ Detection: extractManifest from c2pa-text detects method
 automatically. No flag required in the manifest.
 Verification tool requires no changes for A.9 support.
 
+Redundant embedding — PROPOSAL 005 — post-v0.1
+One complete full manifest copy embedded per paragraph via A.9.
+Copies overlap by 25% of chunk range. Cross-copy reconstruction
+via seq number grouping. See PROPOSAL 005 for full architecture.
+Two new verification states defined: anchor_only, partial_recovery.
+Chunk header format: seq uint16 + total uint16 + copy_id uint8
++ version uint8 = 6 bytes prepended to each A.9 chunk payload.
+
 ---
 
 ## 4.1 Manifest Compression — Shortcode Dictionary [DEFINED — v0.1]
@@ -435,6 +443,16 @@ Output — registry_required: signal absent, registry lookup
 Constraint: verification never modifies the input
 Constraint: certificate revocation check is mandatory,
            not optional — lesson from UMBC paper
+
+Output — anchor_only: no full manifest recoverable, anchor
+  manifests present. Returns: text_hash, overall_ai_proportion,
+  human_proportion, algorithm, signed_at. No segment breakdown.
+  No signature verification.
+
+Output — partial_recovery: manifest partially reconstructed
+  from cross-copy surviving chunks. Returns: reconstructed
+  fields, missing seq positions list, reconstruction map.
+  Signature verification did not run.
 
 ---
 
@@ -558,6 +576,10 @@ Corrupted signal — returns degraded.
 - Certificate fetch failure — network unavailable scenario
 - Chain depth test — not applicable until multi-round
   provenance is implemented
+- PROPOSAL 005 overlap reconstruction — not yet tested
+- anchor_only state — not yet tested
+- partial_recovery state — not yet tested
+- Cross-copy seq deduplication logic — not yet tested
 
 ---
 
@@ -586,6 +608,17 @@ These must be resolved before building the signing layer:
       decision, chain depth limit, poisoned chain detection.
       References: SPEC.md [H1], [H2], [H3] from proposal repo.
       [OPEN — post-v0.1, pre-working-group-submission]
+      
+- [ ] Minimum document length requirement for paragraph-bound
+      copy model — total payload size must be profiled before
+      implementation. Short documents may not have sufficient
+      characters to carry one full copy per paragraph.
+- [ ] Anchor manifest signing — deferred to v0.2. Unsigned
+      anchors are forensically useful but not cryptographically
+      verifiable independently.
+- [ ] c2pa-text chunk header exposure — extraction output
+      must expose chunk headers for reconstruction logic.
+      May require implementation above c2pa-text layer.
 ---
 
 ## 10. Change Log

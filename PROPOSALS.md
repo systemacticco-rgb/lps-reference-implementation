@@ -731,71 +731,231 @@ Do not build until responsible disclosure process is complete
 and testing permission is obtained from at least one AI provider.
 
 ## PROPOSAL 005 — Redundant Embedding with Anchor Layer
+and Cross-Copy Reconstruction
 
 Status: proposed — post-v0.1
 
-Problem:
+═══════════════════════════════════════════
+PROBLEM
+═══════════════════════════════════════════
+
 A.9 distributes one manifest as dependent sequential fragments.
 Partial copy by the user destroys the payload if any fragment
 is missing. No reconstruction is possible from partial fragments.
+A single copy embedded once has a single point of failure.
 
-Proposed architecture — two layers:
+═══════════════════════════════════════════
+ARCHITECTURE — TWO LAYERS
+═══════════════════════════════════════════
 
-Layer 1 — Anchor manifest
-A minimal manifest containing document-level fields only:
-text_hash, overall_ai_proportion, human_proportion,
-algorithm, signed_at. No segment array. No signature.
-Embedded using A.8 at the start of the document and
-repeated at each paragraph boundary.
-Purpose: survive short copies, provide document fingerprint
-and proportion summary independently of the full manifest.
-Size: fits within A.8 ceiling by design — segment array
-is the primary size driver and is absent here.
+Layer 1 — Anchor Manifest
+Layer 2 — Overlapping Redundant Full Manifest Copies
 
-Layer 2 — Redundant full manifests
-Three or more complete copies of the full signed manifest
-embedded using A.9 at defined positions: document start,
-document middle, document end. Each copy independently
-extractable. Verifier attempts each position in order
-and uses first valid complete copy found.
-Purpose: increase survival odds across partial copies.
-Majority vote rule if copies conflict — two of three
-intact copies take precedence over one corrupted copy.
+═══════════════════════════════════════════
+LAYER 1 — ANCHOR MANIFEST
+═══════════════════════════════════════════
 
-Reconstruction mechanism
-Each A.9 chunk carries a positional header: sequence number
-and total chunk count. Format: [seq: uint16, total: uint16]
-prepended to each chunk payload. Adds 4 bytes per chunk.
-Enables surviving fragments from a damaged copy to be
-identified and reconstructed using fragments from intact
-copies at matching sequence positions.
-This is a partial erasure recovery mechanism — not full
-erasure coding. Reconstruction succeeds when at least one
-copy is intact. It does not guarantee reconstruction from
-fragments alone.
+A minimal manifest embedded at the start of every paragraph.
+Contains document-level fields only:
 
-Forensic value
-Even when full reconstruction fails, surviving anchor
-manifests at paragraph boundaries provide:
-- text_hash at generation time
-- overall_ai_proportion and human_proportion
-- signing timestamp and algorithm
-This is sufficient for a forensic report to establish
-document-level provenance without segment-level detail.
+  text_hash
+  overall_ai_proportion
+  human_proportion
+  algorithm
+  signed_at
 
-Constraints
+No segment array. No signature. No cert.
+Always fits under A.8 ceiling by design.
+Segment array is the primary size driver — its absence
+keeps the anchor small regardless of document complexity.
+
+Purpose:
+- Survive short copies where no full copy is recoverable
+- Confirm expected chunk total and text_hash for reconstruction
+  validation
+- Provide forensic document-level picture when all full copies
+  are lost
+
+Embedded using A.8 — one block per paragraph start character.
+Number of anchors = number of paragraphs in document.
+
+═══════════════════════════════════════════
+LAYER 2 — OVERLAPPING REDUNDANT FULL MANIFEST COPIES
+═══════════════════════════════════════════
+
+Multiple complete copies of the full signed manifest embedded
+using A.9 across the document. Each copy is independently
+extractable. Copies overlap intentionally to eliminate boundary
+vulnerabilities and enable cross-copy reconstruction.
+
+Number of copies:
+One complete copy per paragraph. Scales automatically with
+document length. A ten paragraph document carries ten copies.
+
+Overlap model — fixed at 25%:
+Each copy overlaps the previous copy by 25% of its chunk range.
+This is the defined spec value — not calculated dynamically.
+
+Example — 120 chunk manifest, four paragraph document:
+  Copy A: chunks 001–040  (paragraphs 1 characters)
+  Copy B: chunks 031–070  (paragraph 2 characters)
+  Copy C: chunks 061–100  (paragraph 3 characters)
+  Copy D: chunks 091–120  (paragraph 4 characters)
+
+Overlap zones:
+  Copy A / Copy B overlap: chunks 031–040
+  Copy B / Copy C overlap: chunks 061–070
+  Copy C / Copy D overlap: chunks 091–100
+
+Every chunk in the overlap zone exists in two independent copies
+attached to different visible characters in different paragraphs.
+Deleting one paragraph cannot destroy both copies of any
+overlapping chunk.
+
+═══════════════════════════════════════════
+CHUNK STRUCTURE
+═══════════════════════════════════════════
+
+Every A.9 chunk carries a four-field positional header
+prepended before the payload bytes:
+
+  seq      uint16  — position of this chunk in the full sequence
+  total    uint16  — total chunks in the full sequence
+  copy_id  uint8   — which copy this chunk belongs to (A=1, B=2...)
+  version  uint8   — header format version, fixed at 1 for v0.1
+
+Header size: 6 bytes per chunk.
+Payload bytes follow immediately after the header.
+Total chunk size: 6 + payload_slice_size bytes.
+
+The seq number is the universal identifier. Two chunks with
+the same seq number from different copy_ids carry identical
+payload bytes. The verifier treats them as interchangeable.
+
+═══════════════════════════════════════════
+RECONSTRUCTION LOGIC
+═══════════════════════════════════════════
+
+Step 1 — Collection
+Extract all chunks from all positions in received text.
+Group by seq number across all copy_ids.
+For each seq position, record all surviving chunks found.
+
+Step 2 — Deduplication
+For each seq position, take the first surviving chunk found.
+All chunks at the same seq position are identical — any one
+is sufficient. copy_id is irrelevant for payload content.
+
+Step 3 — Gap detection
+Identify missing seq positions — positions where no chunk
+survived in any copy.
+
+Step 4 — Overlap resolution
+Overlap zones are known from the fixed 25% model.
+For seq positions in overlap zones, check both copies.
+If one copy lost the chunk, the other copy's chunk is used.
+No special logic required — deduplication in Step 2 handles
+this automatically via seq number grouping.
+
+Step 5 — Reassembly decision
+If all seq positions 001–total are filled:
+  Reassemble payload, decode CBOR, decompress, verify signature.
+  Return verified or failed based on signature and text hash.
+
+If majority of seq positions filled but gaps remain:
+  Return partial_recovery status.
+  Report which seq positions are missing.
+  Return all fields that could be reconstructed.
+  Note that signature verification cannot run on partial payload.
+
+If no chunks found anywhere:
+  Check anchor manifests.
+  If anchors present — return anchor_only status.
+  If no anchors — check registry.
+  If registry empty — return degraded.
+
+═══════════════════════════════════════════
+VERIFICATION STATUS — NEW STATES
+═══════════════════════════════════════════
+
+anchor_only
+  No full manifest copy recoverable.
+  Anchor manifests present and consistent.
+  Returns: text_hash, overall_ai_proportion, human_proportion,
+  algorithm, signed_at.
+  Does not return segment breakdown.
+  Does not run signature verification.
+  Forensic value: document-level provenance confirmed.
+  Segment-level detail unavailable.
+
+partial_recovery
+  Full manifest partially reconstructed from surviving chunks
+  across multiple copies. Not all seq positions filled.
+  Returns: all fields successfully reconstructed, list of
+  missing seq positions, note that signature verification
+  did not run.
+  Forensic value: partial segment breakdown available.
+  Reconstruction map shows which portions survived.
+
+═══════════════════════════════════════════
+SURVIVAL SCENARIOS
+═══════════════════════════════════════════
+
+User copies one full paragraph:
+  One complete copy recovered. Full verification runs.
+  Status: verified or failed.
+
+User copies portion of one paragraph:
+  No full copy. Overlap chunks from adjacent copies may be
+  present if copied portion included paragraph boundary.
+  Cross-copy reconstruction attempted.
+  Status: partial_recovery or anchor_only.
+
+User accidentally deletes a sentence mid-paragraph:
+  All copies lose chunks attached to deleted characters.
+  Overlap zones in adjacent paragraphs fill those gaps.
+  If gaps filled — full reconstruction succeeds.
+  Anchor text_hash will not match modified text — tamper
+  detected at anchor level before reconstruction completes.
+  Status: failed with original document-level fields from anchor.
+
+Platform strips all non-standard Unicode:
+  All layers lost. Registry fallback only.
+  Status: registry_required or degraded.
+
+Adversarial targeted removal:
+  Requires extraction tool to identify chunk positions.
+  Overlap zones mean each seq position must be removed from
+  two different paragraph locations to truly destroy it.
+  Labor cost scales with number of paragraphs.
+  Status after partial removal: partial_recovery exposes
+  the attempt — missing seq positions are reported explicitly.
+
+═══════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════
+
 - Anchor manifest is not cryptographically signed in v0.1.
   Signing the anchor requires a separate signing pass.
   Deferred to v0.2.
+- Total payload profiling required before implementation:
+  number of copies × manifest size × chunk header overhead
+  must be validated against minimum expected document length.
 - Reconstruction logic requires verificationTool.mjs update.
-- Positional header format must be added to compression.mjs
-  before A.9 chunk generation.
-- Total embedded payload size with three full copies plus
-  anchor manifests must be profiled against document length
-  before implementation.
+- Chunk header format requires embeddingLayer.mjs update.
+- extraction output from c2pa-text must expose chunk headers
+  or chunking must be implemented above the c2pa-text layer.
+- Fixed 25% overlap is the spec value for v0.1 implementation.
+  Overlap percentage is not configurable at runtime.
 
-Connects to
+═══════════════════════════════════════════
+CONNECTS TO
+═══════════════════════════════════════════
+
 PROPOSAL 001 — Notarization Registry
 Section 4 — Embedding Layer
-Section 8 — outstanding test gap: A.9 structured embedding
-  path not yet tested in isolation
+Section 4.1 — Compression — chunk header not yet in shortcode
+              dictionary, not applicable — header is pre-compression
+Section 8 — outstanding test gap: A.9 path not yet tested
+Section 9 — open question: multi-round provenance shares
+            chunk architecture decisions made here
