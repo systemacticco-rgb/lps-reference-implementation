@@ -134,13 +134,17 @@ This tier itself becomes forensic evidence.
 FORENSIC VALUE
 ═══════════════════════════════════════════
 
-The registry is the only verification layer that survives
-transcription, screenshot, and signal stripping. If a
-document is photographed, OCR'd, retyped, or otherwise
-converted through an analog process — all embedded signals
-are destroyed. The content hash remains computable from
-the resulting text. If the text matches the registry record,
-origin is confirmed even without any embedded signal.
+The registry recovers provenance in one specific case: when
+the visible text is reproduced byte-for-byte and only the
+embedded carrier was removed (the targeted-strip case). The
+content hash is computed from the visible text at verification
+time and matched for exact equality against the registry record.
+Photographing, OCR, and retyping alter the visible bytes, which
+changes the hash, which means the registry returns no match.
+That lossy channel is not covered by the registry and is not
+covered by LPS at all — it is the domain of statistical
+watermarking in the SynthID class. The registry defends against
+signal stripping, not against content reproduction.
 
 This is not proof of authorship. It is corroborating
 forensic evidence for legal proceedings — the same category
@@ -402,7 +406,11 @@ and the timestamp exists in the registry regardless.
 
 When the content is later hashed — by a court, a regulator,
 a journalist, a verification tool — the hash matches the
-registry record. The generating identity is in that record.
+registry record only if the visible text was reproduced
+exactly. If the text was edited, transcribed, or OCR'd, the
+hash will not match and the registry cannot link it. The token
+binding defeats carrier stripping of exact content; it does
+not defeat reproduction of altered content. The generating identity is in that record.
 The stripping accomplished nothing forensically.
 
 This is the direct equivalent of the Chilean transit system:
@@ -458,11 +466,14 @@ to verify it through official channels.
 
 HOW THE SIGNAL FIRES WITHOUT THE EMBEDDED TOKEN:
 
-If the embedded signal was stripped — screenshot, OCR, manual
-removal — the verification tool has no token to extract.
-It returns degraded. But it also computes a content hash
-and queries the registry by hash. This is the hash fallback
-path from PROPOSAL 001.
+If the embedded signal was stripped by manual removal that
+preserves the visible text exactly, the verification tool
+computes a content hash and queries the registry by hash —
+the hash fallback path from PROPOSAL 001 — and recovers the
+record. If the signal was lost through screenshot-plus-OCR or
+retyping, the visible bytes have changed, the recomputed hash
+matches nothing, and the registry cannot recover it. That case
+belongs to the statistical-watermark layer, not to LPS.
 
 query_type: hash_fallback
 
@@ -718,3 +729,73 @@ evidence of potential injection attempt.
 ### Status
 Do not build until responsible disclosure process is complete
 and testing permission is obtained from at least one AI provider.
+
+PROPOSAL 005 — Redundant Embedding with Anchor Layer
+
+Status: proposed — post-v0.1
+
+Problem:
+A.9 distributes one manifest as dependent sequential fragments.
+Partial copy by the user destroys the payload if any fragment
+is missing. No reconstruction is possible from partial fragments.
+
+Proposed architecture — two layers:
+
+Layer 1 — Anchor manifest
+A minimal manifest containing document-level fields only:
+text_hash, overall_ai_proportion, human_proportion,
+algorithm, signed_at. No segment array. No signature.
+Embedded using A.8 at the start of the document and
+repeated at each paragraph boundary.
+Purpose: survive short copies, provide document fingerprint
+and proportion summary independently of the full manifest.
+Size: fits within A.8 ceiling by design — segment array
+is the primary size driver and is absent here.
+
+Layer 2 — Redundant full manifests
+Three or more complete copies of the full signed manifest
+embedded using A.9 at defined positions: document start,
+document middle, document end. Each copy independently
+extractable. Verifier attempts each position in order
+and uses first valid complete copy found.
+Purpose: increase survival odds across partial copies.
+Majority vote rule if copies conflict — two of three
+intact copies take precedence over one corrupted copy.
+
+Reconstruction mechanism
+Each A.9 chunk carries a positional header: sequence number
+and total chunk count. Format: [seq: uint16, total: uint16]
+prepended to each chunk payload. Adds 4 bytes per chunk.
+Enables surviving fragments from a damaged copy to be
+identified and reconstructed using fragments from intact
+copies at matching sequence positions.
+This is a partial erasure recovery mechanism — not full
+erasure coding. Reconstruction succeeds when at least one
+copy is intact. It does not guarantee reconstruction from
+fragments alone.
+
+Forensic value
+Even when full reconstruction fails, surviving anchor
+manifests at paragraph boundaries provide:
+- text_hash at generation time
+- overall_ai_proportion and human_proportion
+- signing timestamp and algorithm
+This is sufficient for a forensic report to establish
+document-level provenance without segment-level detail.
+
+Constraints
+- Anchor manifest is not cryptographically signed in v0.1.
+  Signing the anchor requires a separate signing pass.
+  Deferred to v0.2.
+- Reconstruction logic requires verificationTool.mjs update.
+- Positional header format must be added to compression.mjs
+  before A.9 chunk generation.
+- Total embedded payload size with three full copies plus
+  anchor manifests must be profiled against document length
+  before implementation.
+
+Connects to
+PROPOSAL 001 — Notarization Registry
+Section 4 — Embedding Layer
+Section 8 — outstanding test gap: A.9 structured embedding
+  path not yet tested in isolation
