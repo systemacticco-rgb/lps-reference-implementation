@@ -800,7 +800,7 @@ Section 4 — Embedding Layer
 Section 8 — outstanding test gap: A.9 structured embedding
   path not yet tested in isolation
 
-  PROPOSAL 005 — Redundant Embedding with Anchor Layer
+## PROPOSAL 005 — Redundant Embedding with Anchor Layer
 
 Status: proposed — post-v0.1
 
