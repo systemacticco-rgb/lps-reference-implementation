@@ -28,7 +28,8 @@ const FIELD_MAP = {
   signature: 'sig',
   cert_url: 'cu',
   cert_fingerprint: 'cfp',
-  algorithm: 'alg'
+  algorithm: 'alg',
+  confidence_source: 'csrc',
 };
 
 const ORIGIN_MAP = {
@@ -53,7 +54,8 @@ export function compress(signedManifest) {
         [FIELD_MAP.start_offset]: seg.start_offset,
         [FIELD_MAP.end_offset]: seg.end_offset,
         [FIELD_MAP.origin]: ORIGIN_MAP[seg.origin] ?? seg.origin,
-        [FIELD_MAP.confidence]: seg.confidence
+        [FIELD_MAP.confidence]: seg.confidence,
+        [FIELD_MAP.confidence_source]: seg.confidence_source
       };
       if (seg.ai_tool) entry[FIELD_MAP.ai_tool] = seg.ai_tool;
       if (seg.modification_degree != null) entry[FIELD_MAP.modification_degree] = seg.modification_degree;
@@ -88,7 +90,8 @@ export function decompress(compressed) {
         start_offset: seg[FIELD_MAP.start_offset],
         end_offset: seg[FIELD_MAP.end_offset],
         origin: ORIGIN_MAP_REVERSE[seg[FIELD_MAP.origin]] ?? seg[FIELD_MAP.origin],
-        confidence: seg[FIELD_MAP.confidence]
+        confidence: seg[FIELD_MAP.confidence],
+        confidence_source: seg[FIELD_MAP.confidence_source]
       };
       if (seg[FIELD_MAP.ai_tool]) entry.ai_tool = seg[FIELD_MAP.ai_tool];
       if (seg[FIELD_MAP.modification_degree] != null) entry.modification_degree = seg[FIELD_MAP.modification_degree];
@@ -117,4 +120,12 @@ export function encodeToCBOR(compressed) {
 
 export function decodeFromCBOR(buffer) {
   return decode(buffer);
+}
+
+// Canonical CBOR bytes for signing/verification.
+// Deterministic: identical bytes for logically-equal objects,
+// independent of key insertion order. Both signingLayer and
+// verificationTool MUST use this same function.
+export function canonicalBytes(obj) {
+  return pkg.encodeCanonical(obj);
 }

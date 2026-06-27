@@ -1,20 +1,48 @@
 import { createHash } from 'crypto';
+import { calculateFallbackConfidence } from './confidenceFallback.mjs';
 
 export function generateManifest({ visibleText, segments, signingTool, signedAt }) {
+  // Replace the existing content_segments mapping block in generateManifest()
+
+  // Calculate fallback confidence map before mapping segments —
+  // only used when a segment arrives with no confidence value
+  const fallbackConfidence = calculateFallbackConfidence(segments);
+
   const content_segments = segments.map((segment) => {
+    const hasConfidence = segment.confidence !== undefined && segment.confidence !== null;
+
+    // Normalize float to integer if tool supplied a float (e.g. 0.95 → 95)
+    const rawConfidence = hasConfidence
+      ? Math.round(segment.confidence <= 1 ? segment.confidence * 100 : segment.confidence)
+      : null;
+
+    if (hasConfidence && (rawConfidence < 0 || rawConfidence > 100)) {
+      throw new Error(`Segment ${segment.segmentId}: confidence value out of range — must be 0–100`);
+    }
+
+    const confidenceValue = hasConfidence
+      ? rawConfidence
+      : fallbackConfidence[segment.origin];
+
+    const confidenceSource = hasConfidence ? 'tool' : 'fallback';
+
     const entry = {
-      segment_id: segment.segmentId,
-      start_offset: segment.startOffset,
-      end_offset: segment.endOffset,
-      origin: segment.origin,
-      confidence: segment.confidence,
+      segment_id:        segment.segmentId,
+      start_offset:      segment.startOffset,
+      end_offset:        segment.endOffset,
+      origin:            segment.origin,
+      confidence:        confidenceValue,
+      confidence_source: confidenceSource
     };
 
-    if (segment.origin === "ai_generated" || segment.origin === "ai_modified_human") {
+    if (segment.origin === 'ai_generated' || segment.origin === 'ai_modified_human') {
       entry.ai_tool = segment.aiTool;
     }
 
-    if (segment.origin === "ai_modified_human") {
+    if (segment.origin === 'ai_modified_human') {
+      if (segment.modificationDegree === undefined || segment.modificationDegree === null) {
+        throw new Error(`Segment ${segment.segmentId}: modification_degree is required for ai_modified_human`);
+      }
       entry.modification_degree = segment.modificationDegree;
     }
 

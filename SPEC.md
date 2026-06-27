@@ -14,14 +14,129 @@ Status: Skeleton — sections marked [DEFINED], [PLACEHOLDER], [SECURITY-CRITICA
 
 ---
 
-## 1. Input Format [PLACEHOLDER]
+## 1. Input Format [DEFINED — v0.1]
 What the manifest generator receives as input.
 - Content: string (plain text for v0.1)
 - Segments: array — start offset, end offset, origin type
 - Origin types: "human" | "ai_generated" | "ai_modified_human"
 - AI tool identifier: string
 - Modification degree: float 0-1 (required for ai_modified_human only)
+- Confidence: integer 0-100 (see 1.1)
 - Timestamp: ISO 8601
+
+---
+
+## 1.1 Confidence Value — Source of Truth and Fallback [DEFINED — v0.1]
+
+### Primary source — mandatory
+The generating AI tool is the authoritative source of confidence.
+When an AI tool produces or modifies a segment, its API response
+must supply the confidence value for that segment directly.
+This is the only source that reflects first-person certainty
+about the origin classification. No other source supersedes it.
+
+### Fallback source hierarchy
+When the generating tool does not supply a confidence value,
+the following sources are used in priority order:
+
+1. Output from an approved AI detection classifier, mapped to 0–100.
+2. Human reviewer manual assignment, integer 0–100.
+3. Mathematical fallback — see 1.2.
+
+### Validation rules at entry point
+generateManifest() applies these rules to every segment:
+- Confidence must be an integer between 0 and 100 inclusive.
+- If confidence is a float (e.g. 0.95), multiply by 100 and round
+  to nearest integer.
+- If confidence is absent, the mathematical fallback defined in
+  1.2 runs automatically.
+- If confidence is present but outside 0–100 range,
+  generateManifest() throws.
+- Confidence is never null in the output manifest.
+  The fallback guarantees a value.
+
+### Modification degree
+Cannot be derived mathematically. The pipeline never sees the
+original human text before AI modification occurred. Only the
+tool that performed the modification knows the before state.
+If modification_degree is absent on an ai_modified_human segment,
+generateManifest() throws. It is a required field with no fallback.
+
+---
+
+## 1.2 Confidence Fallback — Mathematical Derivation [DEFINED — v0.1]
+
+When no confidence value is supplied by the generating tool or
+any fallback source, generateManifest() calculates a rough
+approximation from the segment's own character distribution
+relative to the full document.
+
+### Method
+For each segment, calculate the proportion of characters
+belonging to each origin type across the full document.
+A segment whose character range is dominated by a single origin
+type receives a higher fallback confidence than a mixed or
+ambiguous range. The fallback confidence assigned to a segment
+equals the document-wide percentage of characters sharing
+that segment's origin type, floored to the nearest integer.
+
+### Example — document of 507 characters, seven segments
+  aig   0–20    =  21 chars
+  p     20–30   =  11 chars
+  aig   30–90   =  61 chars
+  aimh  90–120  =  31 chars
+  aig   120–200 =  81 chars
+  aimh  200–250 =  51 chars
+  aig   250–500 = 251 chars
+
+  Total characters:             507  (offsets inclusive)
+  AI-generated (aig):           414 chars = 81.66%
+  AI-modified human (aimh):      82 chars = 16.17%
+  Human (p):                     11 chars =  2.17%
+
+  Fallback confidence for an aig segment  = floor(81.66) = 81
+  Fallback confidence for an aimh segment = floor(16.17) = 16
+  Fallback confidence for a p segment     = floor(2.17)  =  2
+
+### Important constraint
+Mathematical fallback confidence is a structural approximation,
+not a forensic measurement. It reflects document-level character
+distribution, not signal strength for any individual segment.
+The manifest must record that fallback was used so a verifier
+knows the confidence value was not supplied by the generating tool.
+
+### Fallback flag — confidence_source
+Every segment in the output manifest carries a confidence_source
+field recording how its confidence value was produced.
+
+  confidence_source: "tool"     — supplied directly by the
+                                  generating AI tool.
+  confidence_source: "derived"  — supplied by a classifier or
+                                  human reviewer.
+  confidence_source: "fallback" — calculated by mathematical
+                                  derivation defined in 1.2.
+
+This field survives compression, embedding, and verification
+intact. A verifier must surface it alongside the confidence
+value so the distinction is never hidden from the reader.
+
+### Shortcode — section 4.1 addition required
+confidence_source is a new manifest field not present in the
+v0.1 shortcode dictionary. Add the following entry to section 4.1
+before implementing:
+
+  csrc = confidence_source
+
+### Code changes required
+generateManifest() in manifestGenerator.mjs must be updated to:
+1. Accept optional confidence per segment.
+2. Detect absence of confidence and run the fallback calculation.
+3. Write confidence_source on every segment in the output.
+The fallback calculation runs after all segments are mapped,
+using the totalCharCount, aiCharCount, and humanCharCount
+values already computed for proportion calculation.
+
+
 
 Open question: how does the tool know segment boundaries?
 Approach 1 — provided by the AI tool at creation time [PREFERRED]
@@ -258,6 +373,7 @@ sig  = signature
 cu   = cert_url
 cfp  = cert_fingerprint
 alg  = algorithm
+csrc = confidence_source
 
 ### Origin value codes — v0.1
 h    = human
@@ -424,6 +540,11 @@ testRegistryVerification.mjs — registry_required state
   embedded signal but content hash exists in registry,
   degraded state fires when text has no signal and no
   registry record.
+
+testConfidenceFallback.mjs — confidenceFallback.mjs
+  Confirms: correct integer returned per origin type,
+  floor applied correctly, zero guard returns 0 for all origins,
+  proportions sum correctly across all segments.
 
 ### Adversarial test coverage
 Tampered visible text — returns failed with original_manifest.
