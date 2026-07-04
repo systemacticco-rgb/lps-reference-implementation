@@ -7,7 +7,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const CONTENT_HASH_PATTERN = /^[a-f0-9]{64}$/;
+// NOTE: generating_id format (identity vs. version encoding,
+// UUID vs. structured string) is an open schema question — see
+// SPEC.md §9. Only a minimal safety check runs here, not format
+// validation, until that design decision is made deliberately.
+const GENERATING_ID_SAFETY_PATTERN = /^[\x20-\x7E]{1,128}$/;
+
+
 export async function registerContent({ contentHash, generatingId }) {
+  if (!CONTENT_HASH_PATTERN.test(contentHash)) {
+    throw new Error('registerContent: contentHash must be exactly 64 lowercase hex characters');
+  }
+  if (typeof generatingId !== 'string' || !GENERATING_ID_SAFETY_PATTERN.test(generatingId)) {
+    throw new Error('registerContent: generatingId must be a printable ASCII string, 1-128 characters');
+  }
+
   const token = 'lps_' + crypto.randomBytes(16).toString('hex');
 
   const { data, error } = await supabase

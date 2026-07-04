@@ -3,6 +3,28 @@ import { signManifest } from './signingLayer.mjs';
 import { generateManifest } from './manifestGenerator.mjs';
 import { verifyManifest } from './verificationTool.mjs';
 
+/*
+ * [J.1] WHAT THIS FILE DOES
+ * This is the most important test in the suite.
+ * It runs the entire pipeline end to end — Stages 1, 2, and 3 to build
+ * the document, then Stage 4 to verify it — and then runs it a second time
+ * on a deliberately tampered version of the same document.
+ * Two runs. Two expected outcomes.
+ * First: verified. Second: failed.
+ * If both come back as expected, the full system works — including its
+ * ability to detect modification after signing.
+ */
+
+/*
+ * [J.2] BUILDING THE TEST DOCUMENT — STAGES 1, 2, 3
+ * A short two-segment text: one human segment, one AI segment.
+ * The boundary is at character 21 — "This is human written." ends there.
+ * Everything from 22 onward is ai_generated.
+ * generateManifest() builds the record. signManifest() seals it.
+ * embedManifest() hides it inside the text.
+ * embeddedText is the finished document — what a real system would distribute.
+ */
+
 const visibleText = "This is human written. This part was AI generated.";
 
 const manifest = generateManifest({
@@ -19,12 +41,56 @@ const signedManifest = signManifest(manifest);
 const embeddedText = embedManifest(visibleText, signedManifest);
 
 (async () => {
+
+/*
+ * [J.3] RUN 1 — THE CLEAN VERIFICATION
+ * verifyManifest() receives the untampered embeddedText.
+ * It runs all four internal steps: extract, decode, verify signature,
+ * verify text hash. Nothing has been touched since embedding.
+ * Expected output: status "verified" with the full segment breakdown,
+ * proportions, algorithm, and signed_at timestamp.
+ * This run proves the happy path works — a legitimate document
+ * produced by the pipeline verifies cleanly on the other end.
+ */
+
 console.log('--- Verification result ---');
 const result = await verifyManifest(embeddedText);
 console.log(JSON.stringify(result, null, 2));
+
+/*
+ * [J.4] RUN 2 — THE ADVERSARIAL TEST
+ * " TAMPERED" is appended directly to embeddedText.
+ * The invisible signal is still inside the text — it was not removed.
+ * The signed manifest is still there — it was not altered.
+ * But the visible text is now different from the text that was hashed
+ * at Stage 1 and recorded in the manifest as text_hash.
+ *
+ * What verifyManifest() will do with this:
+ * Step 1 — extraction succeeds. The signal is still present.
+ * Step 2 — decoding succeeds. The manifest comes out intact.
+ * Step 3 — signature verification passes. The manifest was not modified.
+ * Step 4 — text hash check fails. The received text hashes to a different
+ *           value than the one stored in the manifest. The appended string
+ *           changed the fingerprint. The mismatch is caught.
+ *
+ * Expected output: status "failed", reason stating the content hash
+ * does not match, and the original_manifest block showing what the
+ * document looked like at signing time — before the tampering occurred.
+ *
+ * Plain English: the signature on the manifest is still valid.
+ * The manifest itself was not touched. But the text it describes
+ * is no longer the text being presented. The system catches that
+ * and reports exactly what happened and what the original looked like.
+ * That is the adversarial guarantee. This run proves it holds.
+ */
 
 console.log('--- Adversarial test: tampered text ---');
 const tamperedText = embeddedText + " TAMPERED";
 const tamperedResult = await verifyManifest(tamperedText);
 console.log(JSON.stringify(tamperedResult, null, 2));
+
 })();
+// The entire async block is wrapped in an immediately invoked async function
+// because verifyManifest() is async — it fetches the certificate over the network.
+// Top-level await is available in .mjs files but the IIFE makes the async
+// boundary explicit and keeps both test runs inside the same execution scope.

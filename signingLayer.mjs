@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { createSign, createVerify, createHash } from 'crypto';
+import { canonicalBytes } from './compression.mjs';
 
 export function signManifest(manifest) {
   let privateKey;
@@ -18,14 +19,16 @@ export function signManifest(manifest) {
   }
 
   try {
-    const manifestString = JSON.stringify(manifest);
-    const manifestBuffer = Buffer.from(manifestString, 'utf8');
+    const manifestBuffer = canonicalBytes(manifest);
 
     const signer = createSign('SHA256');
     signer.update(manifestBuffer);
     signer.end();
 
-    const signature = signer.sign(privateKey, 'base64');
+    const signature = signer.sign(
+      { key: privateKey, dsaEncoding: 'ieee-p1363' },
+      'base64'
+    );
 
     const certFingerprint = createHash('sha256').update(certificate, 'utf8').digest('hex');
 

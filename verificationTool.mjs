@@ -1,6 +1,6 @@
 import { extractManifest } from 'c2pa-text';
 import { createVerify, createHash } from 'crypto';
-import { decompress, decodeFromCBOR } from './compression.mjs';
+import { decompress, decodeFromCBOR, canonicalBytes } from './compression.mjs';
 import { queryRegistry } from './registryClient.mjs';
 
 export async function verifyManifest(embeddedText) {
@@ -69,11 +69,15 @@ export async function verifyManifest(embeddedText) {
       };
     }
 
-    const manifestBuffer = Buffer.from(JSON.stringify(signedManifest.manifest), 'utf8');
+    const manifestBuffer = canonicalBytes(signedManifest.manifest);
     const verifier = createVerify('SHA256');
     verifier.update(manifestBuffer);
     verifier.end();
-    signatureValid = verifier.verify(certificate, signedManifest.signature, 'base64');
+    signatureValid = verifier.verify(
+      { key: certificate, dsaEncoding: 'ieee-p1363' },
+      signedManifest.signature,
+      'base64'
+    );
   } catch {
     return {
       status: 'failed',
@@ -97,6 +101,28 @@ export async function verifyManifest(embeddedText) {
   const receivedHash = createHash('sha256').update(extracted.cleanText, 'utf8').digest('hex');
 
   if (receivedHash !== signedManifest.manifest.text_hash) {
+    // Replay/transfer disclosure threshold (working-group-submission.md §5,
+    // "Transfer/replay"; SPEC.md §9). original_manifest is only disclosed
+    // when the received text's length is close enough to the signed
+    // text's length to plausibly be a real edit of it — not a deliberate
+    // large-mismatch replay attempt used to harvest manifest structure.
+    // Threshold: 10% of signed text_length, either direction.
+    const signedLength = signedManifest.manifest.text_length;
+    const receivedLength = extracted.cleanText.length;
+    const lengthDelta = Math.abs(receivedLength - signedLength);
+    const withinThreshold = signedLength > 0
+      ? (lengthDelta / signedLength) <= 0.10
+      : lengthDelta === 0;
+
+    if (!withinThreshold) {
+      return {
+        status: 'failed',
+        reason: 'Visible text was modified after signing — content hash does not match. Original manifest withheld: received text length differs from signed text length beyond the disclosure threshold.',
+        signed_at: signedManifest.signed_at ?? null,
+        algorithm: signedManifest.algorithm ?? null
+      };
+    }
+
     return {
       status: 'failed',
       reason: 'Visible text was modified after signing — content hash does not match',

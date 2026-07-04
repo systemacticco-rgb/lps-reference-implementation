@@ -1,5 +1,8 @@
 # LPS Reference Implementation — Technical Specification
 Version: 0.1-draft
+This document mixes implemented behavior with forward-looking
+architectural specifications. Every section must explicitly
+identify whether it is Built, Defined, Planned, or Placeholder.
 Status: Skeleton — sections marked [DEFINED], [PLACEHOLDER], [SECURITY-CRITICAL]
 
 ---
@@ -10,7 +13,9 @@ Status: Skeleton — sections marked [DEFINED], [PLACEHOLDER], [SECURITY-CRITICA
 - No mixed responsibilities
 - Audited libraries only — no custom cryptographic implementations
 - Every function must be independently testable
-- AI agents follow this spec exactly — no assumptions outside scope
+- AI agents follow this specification exactly. If implementation
+status is not explicitly marked as built, treat the feature as
+undefined rather than making architectural assumptions.
 
 ---
 
@@ -246,8 +251,19 @@ embedding layer. It seals the manifest before it enters the text.
 ---
 
 ## 3. Signing Layer [SECURITY-CRITICAL]
-Algorithm: es256 (ECDSA P-256)
+Algorithm: es256 (ECDSA P-256, SHA-256, raw r‖s signature encoding)
 Library: Node.js built-in crypto module (no install required)
+Signature encoding: IEEE P1363 (raw r‖s, 64 bytes fixed for P-256).
+  Required because the JOSE/COSE "ES256" identifier specifies
+  raw r‖s encoding, not DER. Node's default sign()/verify()
+  output is DER — must explicitly pass
+  { key, dsaEncoding: 'ieee-p1363' } to both createSign().sign()
+  and createVerify().verify() calls. Confirmed June 30 2026:
+  internal round-trip (testSigning.mjs, testVerification.mjs)
+  and external cross-check against the independent panva/jose
+  library both pass. Signatures produced by signingLayer.mjs
+  are genuinely interoperable with standard JOSE/COSE ES256
+  verifiers, not merely self-consistent with this codebase.
 Note: @contentauth/c2pa-node is used in component 3 (embedding
       layer) only, not for signing. Signing uses native crypto
       exclusively.
@@ -294,6 +310,13 @@ no binary compatibility risk, no version management required.
 @contentauth/c2pa-node is used in component 3 (embedding layer)
 only. Signing and embedding are separate concerns using separate
 tools.
+
+HMAC key derivation for anchor manifests:
+Sign UTF-8 bytes of 'lps-anchor-hmac-v0.1' using
+createSign('SHA256') with private key. Resulting signature
+buffer becomes HMAC key material. No HKDF. No external
+dependencies. Consistent with no-external-crypto constraint.
+
 ---
 
 ## 4. Embedding Layer [DEFINED — infrastructure exists]
@@ -364,6 +387,7 @@ New codes may be added in future versions only.
 ### Field name codes — v0.1
 lv   = lps_version
 th   = text_hash
+tl   = text_length
 cs   = content_segments
 sid  = segment_id
 so   = start_offset
@@ -380,8 +404,11 @@ m    = manifest
 sig  = signature
 cu   = cert_url
 cfp  = cert_fingerprint
-alg  = algorithm
 csrc = confidence_source
+alg  = algorithm
+
+### Algorithm field value convention [DEFINED — June 30 2026]
+The `algorithm` field (shortcode `alg`) uses the internal string value `es256` to label the cryptographic primitive used in signing: ECDSA over the P-256 curve with `SHA-256` using `IEEE P1363` `r‖s` encoding. This is an LPS-internal naming convention and does not represent a `COSE` or `JOSE` algorithm identifier. In `COSE`, the equivalent algorithm is identified as `ES256` with integer value -7; in JOSE, the equivalent identifier is the string `"ES256"`. LPS does not currently implement either `COSE` or `JOSE` envelope formats, and therefore does not use their identifiers directly in the manifest structure. Future envelope-level interoperability `(COSE_Sign1 / JWS)` may adopt the standard identifiers directly (see Section 9).
 
 ### Origin value codes — v0.1
 h    = human
@@ -410,6 +437,9 @@ Drops quotes from keys, encodes numbers as binary not text digits.
 Estimated additional saving: 50-70% reduction in numeric field size.
 Do not implement until shortcode dictionary is tested in v0.1.
 Requires verification tool update to deserialize CBOR on extraction.
+Status note: this optimization has not been implemented and
+must not be assumed by any component until both serialization
+and verification paths are updated together.
 
 ---
 
@@ -441,8 +471,17 @@ Output — registry_required: signal absent, registry lookup
   Full production architecture: PROPOSALS.md PROPOSAL 001.
 
 Constraint: verification never modifies the input
-Constraint: certificate revocation check is mandatory,
-           not optional — lesson from UMBC paper
+Constraint: certificate revocation checking is part of the
+intended production verification architecture. The current
+reference implementation does not yet implement revocation
+checking and must not imply that this capability already exists.
+
+The verification outputs below are architectural definitions
+specified for PROPOSAL 005. They describe the intended
+verification model but are not produced by the current v0.1
+reference implementation. Their implementation status remains
+Defined until the corresponding components are built,
+integrated, and verified.
 
 Output — anchor_only: no full manifest recoverable, anchor
   manifests present. Returns: text_hash, overall_ai_proportion,
@@ -454,12 +493,52 @@ Output — partial_recovery: manifest partially reconstructed
   fields, missing seq positions list, reconstruction map.
   Signature verification did not run.
 
+Output — injection_detected: conflicting certificates found
+  across chunk assemblies. Returns session certificate
+  fingerprint and injected certificate fingerprint.
+
+Output — anchor_only: updated to note anchor HMAC validation
+  required before anchor fields are trusted. Anchors failing
+  HMAC are discarded before fallback decision.
+
+  anchor_layer: present | absent | conflict
+
+Output — injection_detected: valid chunks found from multiple
+  certificate sources during reconstruction. Session certificate
+  anchor established from first valid assembly. Subsequent
+  assembly produced different cert_url or cert_fingerprint.
+  Returns: status, session_cert_fingerprint,
+  injected_cert_fingerprint, signed_at from session manifest.
+  Forensic value: active adversarial injection attempt recorded
+  with both certificate fingerprints as evidence.
+
+[BUILT — v0.1] original_manifest disclosure in the failed state
+is gated by a length-mismatch threshold, locked at 10% of
+text_length. verificationTool.mjs STEP 4 computes the absolute
+difference between the received text's length and the manifest's
+text_length field; if that difference exceeds 10% of text_length,
+original_manifest is withheld and the failed response returns
+only status, reason, signed_at, and algorithm. This prevents an
+adversary from using extreme-mismatch replay to study document
+structure via repeated submissions. text_length is a plain
+manifest field, protected by the same signature that covers the
+whole manifest — it requires no separate HMAC or hash of its own.
 ---
 
-## 6. Server-Side Record Store [ASSESSED — deferred to post-v0.1]
+## 6. Server-Side Record Store [PARTIALLY IMPLEMENTED]
+
 Architecture defined in PROPOSALS.md PROPOSAL 001.
-Not built in v0.1 reference implementation.
-Required before working group submission.
+
+A functional registry stub exists in the v0.1 reference
+implementation (registryClient.mjs), providing registration
+and lookup by token and content hash for demonstration and
+testing purposes.
+
+The full production architecture—including trust-list
+governance, credential management, certificate lifecycle,
+identity binding, rate limiting, and operational deployment—
+remains future work and is outside the current reference
+implementation.
 
 ### What it is
 An append-only server-side log. Every AI-generated output gets
@@ -505,6 +584,29 @@ PROPOSAL 001 — Notarization Registry
 PROPOSAL 002 — Server-Side Token Binding
 RESEARCH 002 — Legal Framework for Cross-Registry Access
 
+### Input validation constraints — v0.1
+Applied in registerContent() before any Supabase insert runs.
+
+- content_hash must be exactly 64 lowercase hex characters.
+  Reject anything else with a thrown error before insert.
+  generateManifest() already produces this format —
+  this is a defence-in-depth measure not a format conversion.
+- generating_id: a minimal safety-only check runs before insert —
+  non-empty, printable ASCII (0x20-0x7E), 1-128 characters, no
+  control characters. This is NOT format validation in the sense
+  of enforcing an identity/version schema. The actual structural
+  format (opaque token vs. structured identifier, how identity and
+  version are represented) is intentionally undecided. This
+  safety-only check is expected to be superseded once that design
+  question resolves — most likely informed by working group
+  feedback rather than decided unilaterally beforehand. Do not
+  tighten this into a structured pattern without a full design
+  pass. See Section 9 for the open schema question this defers to.
+- Rate limit: maximum registrations per generating_id per hour.
+  Reject inserts exceeding the limit with a thrown error.
+  Threshold open — see Section 9.
+- All three controls applied before Supabase insert runs.
+  Supabase is never called on invalid input.
 ---
 
 ## 7. Security Constraints — Global [SECURITY-CRITICAL]
@@ -519,7 +621,18 @@ These apply to every component without exception:
 - Certificate revocation checking is mandatory
 - Input validation on every entry point
 - Error messages must not leak internal state
-
+- HMAC comparison must use crypto.timingSafeEqual() —
+  never standard equality. Applies to all HMAC verification
+  operations in the codebase without exception.
+- Derived HMAC key material is sensitive. Never logged,
+  never returned in error messages, never stored. Same
+  handling rules as private key material.
+- Magic prefix secondary validation mandatory — type field
+  must be 0 or 1, version must be 1, total must be greater
+  than 0. Buffers failing secondary checks discarded
+  without further parsing.
+- Injection volume cap applied before reconstruction begins.
+  Cap formula open — see Section 9.
 ---
 
 ## 8. Test Requirements [DEFINED — v0.1 complete]
@@ -580,6 +693,26 @@ Corrupted signal — returns degraded.
 - anchor_only state — not yet tested
 - partial_recovery state — not yet tested
 - Cross-copy seq deduplication logic — not yet tested
+- Replay attack detection — failed state with extreme
+  text length mismatch must not return original_manifest.
+- injection_detected state — conflicting certificates
+  across chunk assemblies.
+- anchor_layer: absent flag — verified manifest with
+  no surviving anchors.
+- HMAC timing safety — verify crypto.timingSafeEqual()
+  used in all comparison paths.
+- Registry input validation — invalid hash format,
+  invalid generating_id format, rate limit enforcement.
+- Chunk 001 extended payload — verify 40-byte slice
+  handled correctly through full embed and extract cycle.
+- reconstruction_completeness below 50% threshold —
+  low_confidence_reconstruction flag present in output.
+- paragraphAnalysis merge decisions — verify merge map
+  present in distribution plan and surfaced in output.
+- Magic prefix secondary validation — buffers passing
+  magic prefix but failing secondary checks discarded.
+- injection_volume_exceeded flag — document with
+  anomalous buffer count handled correctly.
 
 ---
 
@@ -619,6 +752,42 @@ These must be resolved before building the signing layer:
 - [ ] c2pa-text chunk header exposure — extraction output
       must expose chunk headers for reconstruction logic.
       May require implementation above c2pa-text layer.
+- [x] Minor mismatch threshold for original_manifest disclosure
+      in failed state — LOCKED at 10% text length difference,
+      implemented in verificationTool.mjs. Revisit if forensic
+      or legal input post-submission indicates 10% is too tight
+      (leaks provenance) or too loose (withholds forensically
+      valuable information).
+
+- [ ] Injection volume cap formula — paragraphCount ×
+      totalChunks × 3 proposed. Needs profiling against
+      realistic document sizes before locking. Cap too low
+      rejects legitimate buffers. Cap too high allows
+      resource exhaustion.
+
+- [ ] Registry rate limit threshold — 100 registrations
+      per generating ID per hour proposed. Needs operational
+      data to validate. Too low breaks legitimate high-volume
+      generation pipelines. Too high allows flooding.
+
+- [ ] generating_id format definition — UUID or versioned
+      tool identifier pattern proposed. Needs working group
+      input. Format must be flexible enough for third-party
+      integrators but strict enough to block arbitrary strings.
+
+- [ ] reconstruction_completeness threshold for
+      low_confidence_reconstruction flag — 50% proposed.
+      Below this threshold the partial breakdown may mislead
+      more than it informs. Needs forensic input on minimum
+      viable segment coverage for a report to be admissible.
+
+- [ ] anchor_layer: absent flag — defines what absence of
+      anchors means forensically when full manifest verified.
+      Is it always evidence of manipulation or are there
+      legitimate cases where anchors are stripped — platform
+      rendering, format conversion — without adversarial intent.
+      Needs working group input before the flag can carry
+      forensic weight.
 ---
 
 ## 10. Change Log
@@ -629,3 +798,48 @@ v0.1-registry-stub — June 21 2026 — registry stub implemented.
   testRegistryVerification.mjs. Updated: verificationTool.mjs
   registry_required state wired. Supabase tables created:
   registry_records, usage_events. All six tests passing.— June 2026 — skeleton created
+v0.1-cose-fix — June 30 2026 — corrected ES256 signature encoding.
+  signingLayer.mjs and verificationTool.mjs updated to use
+  dsaEncoding: 'ieee-p1363' instead of Node's default DER
+  encoding. Closes a label/format mismatch where the algorithm
+  field claimed es256 (which specifies raw r‖s) while actual
+  signature bytes were DER-encoded, variable length ~70-72 bytes.
+  Fixed signatures are now exactly 64 bytes, fixed length, for
+  P-256. Verified via internal test suite and an external
+  cross-check against the independent jose library (panva/jose),
+  confirming genuine JOSE/COSE interoperability rather than
+  internal-only self-consistency. No persisted signed manifests
+  existed at time of fix — no migration required.
+  ---
+
+## 11. Audit and Review History
+
+### June 30 2026 — ES256 signature encoding conformance gap
+Section 3 (Signing Layer) is marked SECURITY-CRITICAL. The
+`algorithm` field declared `es256` from initial implementation,
+but signingLayer.mjs used Node's default DER signature encoding
+rather than the raw r‖s (IEEE P1363) encoding the ES256
+identifier specifies. This was a label/format mismatch present
+from initial build through external review on June 30 2026.
+It was identified through external review, not through this
+project's internal audit process — stated explicitly here for
+accuracy. Fixed same day: dsaEncoding: 'ieee-p1363' added to
+sign() and verify() calls.Verified through the existing internal regression suite (testSigning.mjs and testVerification.mjs) together with an independent primitive-level interoperability cross-check against the panva/jose library. Full envelope-level
+(COSE_Sign1/JWS) interoperability remains unimplemented — see
+Section 9.
+
+Process note: the discovery scan for persisted old-format
+signatures covered local *.json files only. It did not cover
+the lps-certificates GitHub repository or markdown-embedded
+example manifests in this repo or the proposal repository.
+No migration was required for what was scanned. A wider scan
+covering those locations is an outstanding action item.
+
+### Outstanding — standards-conformance verification sweep
+A systematic pass confirming every claimed conformance to an
+external standard (C2PA, COSE, JOSE, RFC 3161, X.509, SHA-256)
+has been independently tested, not merely asserted, has not yet
+been performed. The ES256 encoding gap was caught by asking
+about one specific claim; no equivalent check has been run
+against the others. This sweep is required before working group
+submission.

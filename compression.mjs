@@ -12,6 +12,7 @@ const { encode, decode } = pkg;
 const FIELD_MAP = {
   lps_version: 'lv',
   text_hash: 'th',
+  text_length: 'tl',
   content_segments: 'cs',
   segment_id: 'sid',
   start_offset: 'so',
@@ -42,12 +43,15 @@ const ORIGIN_MAP = {
 const FIELD_MAP_REVERSE = Object.fromEntries(Object.entries(FIELD_MAP).map(([k, v]) => [v, k]));
 const ORIGIN_MAP_REVERSE = Object.fromEntries(Object.entries(ORIGIN_MAP).map(([k, v]) => [v, k]));
 
+const DEFAULT_LPS_VERSION = '0.1';
+const DEFAULT_SIGNING_TOOL = 'lps-reference-implementation-v0.1';
+
 export function compress(signedManifest) {
   // Compress the inner manifest fields
   const m = signedManifest.manifest;
   const compressedManifest = {
-    [FIELD_MAP.lps_version]: m.lps_version,
     [FIELD_MAP.text_hash]: m.text_hash,
+    [FIELD_MAP.text_length]: m.text_length,
     [FIELD_MAP.content_segments]: m.content_segments.map(seg => {
       const entry = {
         [FIELD_MAP.segment_id]: seg.segment_id,
@@ -63,9 +67,17 @@ export function compress(signedManifest) {
     }),
     [FIELD_MAP.overall_ai_proportion]: m.overall_ai_proportion,
     [FIELD_MAP.human_proportion]: m.human_proportion,
-    [FIELD_MAP.signing_tool]: m.signing_tool,
     [FIELD_MAP.signed_at]: m.signed_at
   };
+
+  // Default field assumption (README §3.2, SPEC §4.1) — lv and st
+  // are only written when they differ from the v0.1 defaults.
+  if (m.lps_version !== DEFAULT_LPS_VERSION) {
+    compressedManifest[FIELD_MAP.lps_version] = m.lps_version;
+  }
+  if (m.signing_tool !== DEFAULT_SIGNING_TOOL) {
+    compressedManifest[FIELD_MAP.signing_tool] = m.signing_tool;
+  }
 
   // Compress the outer signed manifest fields
   return {
@@ -82,8 +94,9 @@ export function decompress(compressed) {
   // Decompress the inner manifest fields
   const m = compressed[FIELD_MAP.manifest];
   const decompressedManifest = {
-    lps_version: m[FIELD_MAP.lps_version],
+    lps_version: m[FIELD_MAP.lps_version] ?? DEFAULT_LPS_VERSION,
     text_hash: m[FIELD_MAP.text_hash],
+    text_length: m[FIELD_MAP.text_length],
     content_segments: m[FIELD_MAP.content_segments].map(seg => {
       const entry = {
         segment_id: seg[FIELD_MAP.segment_id],
@@ -99,7 +112,7 @@ export function decompress(compressed) {
     }),
     overall_ai_proportion: m[FIELD_MAP.overall_ai_proportion],
     human_proportion: m[FIELD_MAP.human_proportion],
-    signing_tool: m[FIELD_MAP.signing_tool],
+    signing_tool: m[FIELD_MAP.signing_tool] ?? DEFAULT_SIGNING_TOOL,
     signed_at: m[FIELD_MAP.signed_at]
   };
 

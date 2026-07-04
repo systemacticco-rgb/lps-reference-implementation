@@ -1,3 +1,6 @@
+// ============================================================
+// embeddingLayer.mjs 
+// ============================================================
 import { embedManifest as embedIntoText } from 'c2pa-text';
 import { compress, encodeToCBOR } from './compression.mjs';
 
