@@ -187,8 +187,13 @@ Use the documents this way:
 - public LPS README / proposal — public explanation of the standard
 - working-group submission — review-facing argument and status summary
 - this file — architecture map
-- `RESEARCH.md` — references, discoveries, and rationale
-- `PROPOSALS.md` — future architecture after v0.1
+- `CHANGELOG.md` — versioned change history (absorbed former RESEARCH.md content)
+- `IMPLEMENTATION_STATUS.md` — build status (absorbed former PROPOSALS.md forward-looking content)
+
+Note: `RESEARCH.md` and `PROPOSALS.md` were removed from this repository
+on July 3 2026. Their content was folded into `CHANGELOG.md` and
+`IMPLEMENTATION_STATUS.md` respectively — see the private README's
+"What Is Not In This Repository" section.
 
 ## 11. Core takeaway
 

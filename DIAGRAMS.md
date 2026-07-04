@@ -86,21 +86,31 @@ IEEE P1363]
 ```
 
 ## 5 Verification outcome model for v0.1
-
 ```mermaid
 flowchart TD
     A[Input document] --> B{Carrier present?}
-
     B -->|yes| C{Signature valid?}
     C -->|yes| D{Text hash matches?}
-    C -->|no| E[failed]
+    C -->|no| E[failed
+no original_manifest]
     D -->|yes| F[verified]
-    D -->|no| E
-
+    D -->|no| J{Length within
+10% threshold?}
+    J -->|yes| K[failed
+original_manifest included]
+    J -->|no| L[failed
+original_manifest withheld]
     B -->|no| G{Registry record found?}
     G -->|yes| H[registry_required]
     G -->|no| I[degraded]
 ```
+
+Note: the length-threshold branch (J/K/L) reflects the D.6
+disclosure-threshold decision, locked and implemented July 3 2026.
+A manifest missing `text_length` (a pre-D.6 legacy case, not
+currently producible by this codebase) also routes to `failed`
+with no disclosure — omitted here to keep the diagram readable;
+see `verificationTool.mjs` STEP 4 for the exact three-way branch.
 
 ## 6 Future Proposal 005 flow
 

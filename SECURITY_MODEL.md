@@ -75,6 +75,7 @@ The following must remain true:
 
 - the signature must cover the canonical manifest bytes, not the visible text directly
 - the verification tool must compare the extracted clean text hash against the manifest text hash
+- disclosure of original_manifest in the failed state must be gated by the length-mismatch threshold; a manifest with a missing or unreadable text_length must fail closed (no disclosure) rather than silently falling through to a disclosure decision
 - built features must never be described as future work, and future work must never be described as built
 - algorithm labels must not claim envelope compatibility that the implementation does not provide
 - registry lookup must never be treated as a substitute for signature verification

@@ -2,7 +2,7 @@ import { embedManifest } from './embeddingLayer.mjs';
 import { signManifest } from './signingLayer.mjs';
 import { generateManifest } from './manifestGenerator.mjs';
 import { verifyManifest } from './verificationTool.mjs';
-
+import { evaluateDisclosureThreshold } from './verificationTool.mjs';
 /*
  * [J.1] WHAT THIS FILE DOES
  * This is the most important test in the suite.
@@ -94,3 +94,63 @@ console.log(JSON.stringify(tamperedResult, null, 2));
 // because verifyManifest() is async — it fetches the certificate over the network.
 // Top-level await is available in .mjs files but the IIFE makes the async
 // boundary explicit and keeps both test runs inside the same execution scope.
+
+/*
+ * [D.6 UNIT TESTS] evaluateDisclosureThreshold — direct calls
+ * These bypass signing, embedding, and extraction entirely.
+ * Closes the gap identified in [D.2]: no real pipeline input can
+ * produce a manifest missing text_length, so this scenario can
+ * only be tested by calling the extracted function directly.
+ */
+
+console.log("=== evaluateDisclosureThreshold — direct unit tests ===\n");
+
+console.log("--- Case 1: missing text_length ---");
+{
+  const result = evaluateDisclosureThreshold({ signedLength: undefined, receivedLength: 500 });
+  console.log(result.disclose === false && result.reason === 'missing_text_length' ? "PASS" : "FAIL", JSON.stringify(result));
+}
+
+console.log("\n--- Case 1b: null text_length ---");
+{
+  const result = evaluateDisclosureThreshold({ signedLength: null, receivedLength: 500 });
+  console.log(result.disclose === false && result.reason === 'missing_text_length' ? "PASS" : "FAIL", JSON.stringify(result));
+}
+
+console.log("\n--- Case 2: within threshold (5% delta) ---");
+{
+  const result = evaluateDisclosureThreshold({ signedLength: 1000, receivedLength: 1050 });
+  console.log(result.disclose === true && result.reason === 'within_threshold' ? "PASS" : "FAIL", JSON.stringify(result));
+}
+
+console.log("\n--- Case 2b: exact 10% boundary (inclusive) ---");
+{
+  const result = evaluateDisclosureThreshold({ signedLength: 1000, receivedLength: 1100 });
+  console.log(result.disclose === true && result.reason === 'within_threshold' ? "PASS" : "FAIL", JSON.stringify(result));
+}
+
+console.log("\n--- Case 3: exceeds threshold (20% delta) ---");
+{
+  const result = evaluateDisclosureThreshold({ signedLength: 1000, receivedLength: 1200 });
+  console.log(result.disclose === false && result.reason === 'exceeds_threshold' ? "PASS" : "FAIL", JSON.stringify(result));
+}
+
+console.log("\n--- Case 3b: just past 10% boundary ---");
+{
+  const result = evaluateDisclosureThreshold({ signedLength: 1000, receivedLength: 1101 });
+  console.log(result.disclose === false && result.reason === 'exceeds_threshold' ? "PASS" : "FAIL", JSON.stringify(result));
+}
+
+console.log("\n--- Case 4: zero-length signed text, exact match ---");
+{
+  const result = evaluateDisclosureThreshold({ signedLength: 0, receivedLength: 0 });
+  console.log(result.disclose === true && result.reason === 'within_threshold' ? "PASS" : "FAIL", JSON.stringify(result));
+}
+
+console.log("\n--- Case 4b: zero-length signed text, any mismatch ---");
+{
+  const result = evaluateDisclosureThreshold({ signedLength: 0, receivedLength: 1 });
+  console.log(result.disclose === false && result.reason === 'exceeds_threshold' ? "PASS" : "FAIL", JSON.stringify(result));
+}
+
+console.log("\n=== End evaluateDisclosureThreshold unit tests ===");

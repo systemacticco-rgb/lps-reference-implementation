@@ -2,6 +2,66 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
+## 2026-07-03 (11:18pm) — Disclosure-threshold testability refactor
+- Extracted the D.6 length-mismatch disclosure decision out of
+  `verifyManifest()`'s inline STEP 4 logic into a standalone exported
+  function, `evaluateDisclosureThreshold()`, in `verificationTool.mjs`.
+- Reason: the inline version could not be unit-tested directly — no
+  real pipeline input produces a manifest missing `text_length`, so
+  that edge case was untestable without this extraction.
+- Added 8 direct unit test cases to `testVerification.mjs`: missing
+  `text_length` (undefined and null), within-threshold (5% delta),
+  the exact 10% boundary (inclusive, both sides), exceeds-threshold
+  (20% delta and just-over-boundary), and zero-length signed text
+  (exact match and any mismatch).
+- Verified passing in the real implementation environment. Full
+  pipeline regression reconfirmed: `verified` state on clean text,
+  and the existing adversarial tampered-text test correctly withholds
+  `original_manifest` under the threshold logic.
+- No behavior change — pure structural extraction, verified line-by-
+  line against the pre-refactor inline logic before being applied.
+
+## 2026-07-03 — D.1–D.7 discrepancy audit fixes
+- D.1: `content_hash` format validation (64 lowercase hex) and a
+  minimal safety-only `generating_id` check (printable ASCII, 1–128
+  chars) implemented in `registryClient.mjs` ahead of the Supabase
+  insert. The `generating_id` structural schema question (opaque
+  token vs. structured identifier) was explicitly left open and
+  deferred to working-group input — see SPEC.md §9.
+- D.2: `compression.mjs`'s `compress()` now omits `lv`/`st` when they
+  match v0.1 defaults; `decompress()` fills defaults on absence.
+  Brings code in line with what README §3.2 and SPEC §4.1 already
+  claimed.
+- D.3: `anchor_hmac` shortcode deliberately not added to SPEC §4.1's
+  dictionary — belongs to PROPOSAL 005, whose key hierarchy is still
+  undecided. Revisit once that decision locks.
+- D.4/D.8: `confidence_source` added to all three example segments in
+  README §3.2; `ai_tool` added to the `s002` example (missing despite
+  the code always producing it). Defining sentence added for all
+  three `confidence_source` values, noting `derived` is schema-
+  defined but not currently emitted.
+- D.5: `anchor_hmac` removed entirely from `compression.mjs` — the
+  `FIELD_MAP` entry and both `compress()`/`decompress()` read/write
+  lines. Field was never populated by `manifestGenerator.mjs`; no
+  document claimed it was implemented, so removal created no new
+  discrepancy.
+- D.6: `text_length` field added to the manifest schema
+  (`visibleText.length`, always present, no default-omission).
+  Protected by the same signature covering the rest of the manifest.
+  `original_manifest` disclosure in the `failed` state now gated by a
+  10% length-mismatch threshold in `verificationTool.mjs` STEP 4.
+  Shortcode `tl` added to `compression.mjs`. README §3.2 and SPEC
+  §4.1 updated. "Transfer/replay" threat model entry upgraded from
+  PARTIALLY DEFENDED to DEFENDED.
+- D.7: SPEC §6's `generating_id` pattern text corrected to match the
+  safety-only implementation, with an explicit statement that the
+  structural schema question is open and deferred.
+- Not resolved this session: rate limiting on `registerContent()`.
+  Correct approach confirmed as a Supabase-backed count query
+  (in-memory rejected — Vercel serverless functions do not share
+  memory across invocations). Sequencing pending confirmation of the
+  actual Supabase table schema.
+
 ## 2026-07-03 — Documentation structure added
 
 - Added `ARCHITECTURE.md` as the high-level system map.

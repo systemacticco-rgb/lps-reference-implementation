@@ -97,6 +97,7 @@ const result = generateManifest({
  *   — text_hash: a 64-character hex string. Unique to this exact visibleText.
  *     Run the test twice — the hash must be identical both times.
  *     Change one character in visibleText and re-run — the hash must change.
+ *   — text_length: 501, matching visibleText.length exactly.
  *   — content_segments: three entries, one per segment defined above.
  *     s001 must have no ai_tool and no modification_degree.
  *     s002 must have ai_tool, no modification_degree.
