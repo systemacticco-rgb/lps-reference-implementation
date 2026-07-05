@@ -299,6 +299,11 @@ Constraints:
   zero shared mutable state
 - SIGNING_ENABLED environment variable checked first in every
   signing function before any key access
+  [BUILT — 2026-07-05] Implemented as the first statement in
+  signManifest(), before privateKey or certificate file reads.
+  Operational killswitch only — controls whether this code path
+  will sign, not whether private.pem itself is protected. See
+  CHANGELOG.md 2026-07-05 entry.
 
   Why not @contentauth/c2pa-node for signing:
 @contentauth/c2pa-node is designed to sign media files — images,
@@ -311,11 +316,20 @@ no binary compatibility risk, no version management required.
 only. Signing and embedding are separate concerns using separate
 tools.
 
-HMAC key derivation for anchor manifests:
-Sign UTF-8 bytes of 'lps-anchor-hmac-v0.1' using
-createSign('SHA256') with private key. Resulting signature
-buffer becomes HMAC key material. No HKDF. No external
-dependencies. Consistent with no-external-crypto constraint.
+HMAC key derivation for anchor manifests: [PLANNED — pending key
+hierarchy lock]
+HKDF-SHA256 confirmed as the primitive, replacing the earlier
+createSign-based draft shown in prior versions of this section —
+see PROPOSAL 005 "HMAC key derivation." Derived using Node's
+built-in crypto.hkdfSync('sha256', ikm, salt, info, 32). No
+external dependencies. Consistent with no-external-crypto
+constraint. ikm, salt, and info are NOT YET DEFINED — locked
+together as one decision covering root keying material, whether
+anchor keys derive from the signing key or a separate master
+secret, and how future keys (registry, token, rotation) extend
+the hierarchy without rework. This section is rewritten once with
+final values once that decision locks, then treated as immutable —
+same rule as the shortcode dictionary.
 
 ---
 
@@ -616,6 +630,16 @@ These apply to every component without exception:
 - No key material in logs, console output, or error messages
 - No mixed concerns — each file has one job
 - All dependencies pinned to specific versions
+[NOTE — 2026-07-05] "Pinned" currently means lockfile-enforced
+  (package-lock.json resolves every dependency, including cbor, to
+  one exact version with an integrity hash), not package.json
+  version-string pinning (package.json still uses caret ranges).
+  This distinction matters specifically for cbor: canonical byte
+  output from compression.mjs's canonicalBytes() must stay
+  bit-identical for a given manifest forever, or old signatures stop
+  verifying. See SECURITY_MODEL.md "Security assumptions" for the
+  full risk and why the obvious fixes (freeze the encoder vs. tag the
+  manifest with an encoder version) are both currently deferred.
 - All dependencies checked against known vulnerability databases
   before use
 - Certificate revocation checking is mandatory

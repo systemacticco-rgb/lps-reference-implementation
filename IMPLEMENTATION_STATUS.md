@@ -11,7 +11,7 @@ The v0.1 reference implementation is built and testable. The core pipeline is co
 | Area | Status | Notes |
 |---|---|---|
 | Manifest generation | Built | Produces the LPS manifest from segment input. |
-| Signing layer | Built | Uses Node.js built-in crypto with ES256 / P-256 / SHA-256 and IEEE P1363 raw r‖s encoding. |
+| Signing layer | Built | Uses Node.js built-in crypto with ES256 / P-256 / SHA-256 and IEEE P1363 raw r‖s encoding. SIGNING_ENABLED environment-variable killswitch enforced as the first statement in signManifest(), before any key access — confirmed working 2026-07-05. |
 | Embedding layer | Built | Uses `c2pa-text` infrastructure for text embedding. |
 | Verification tool | Built | Verifies signature, text hash, and recovery states for v0.1. |
 | Registry stub | Built | Supabase-backed stub exists for token/content-hash lookup and logging. |

@@ -56,6 +56,11 @@ const embeddedText = embedManifest(visibleText, signedManifest);
 console.log('--- Verification result ---');
 const result = await verifyManifest(embeddedText);
 console.log(JSON.stringify(result, null, 2));
+console.log(
+  result.status === 'verified' && Array.isArray(result.segments)
+    ? 'PASS' : 'FAIL',
+  '(clean verification: verified status, segments present)'
+);
 
 /*
  * [J.4] RUN 2 — THE ADVERSARIAL TEST

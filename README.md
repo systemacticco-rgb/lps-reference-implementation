@@ -245,11 +245,25 @@ information. Do not resolve them unilaterally:
   See SPEC.md §9.
 - **PROPOSAL 005 key hierarchy** — HKDF-SHA256 confirmed as primitive; ikm,
   salt, and info not yet locked pending root-of-trust decision.
+- **Canonicalization version pinning** — cbor's exact resolved version
+  is currently pinned via package-lock.json only; package.json itself
+  still ranges. Freezing the encoder permanently (Path A) or tagging
+  manifests with an encoder version (Path B, rejected — creates a
+  circular trust problem for PROPOSAL 005 reconstruction) were both
+  evaluated and deferred. Decision required before PROPOSAL 005 ships
+  or before working-group feedback requires an answer. See
+  SECURITY_MODEL.md.
 - **HMAC vs. asymmetric for anchor layer** — HMAC correct if anchor is an
   internal self-check; asymmetric required if independent third-party
   verification of reconstructed manifests is a product goal. Decision pending.
-- **Rate limiting on registerContent()** — Supabase-backed count query is the
-  correct approach; not yet built. See SPEC.md §9.
+- **Rate limiting on registerContent()** — Supabase-backed count query
+  against created_at is the correct mechanism; created_at confirmed
+  present on registry_records. Not yet built. The threshold value
+  ("100 per generating_id per hour") carried in earlier internal notes
+  was never derived from real usage data — no traffic pattern exists
+  yet to base it on. Do not treat that number as settled. Decision on
+  both threshold and window length deferred until real usage data
+  exists. See SPEC.md §9.
 - **SPEC.md §3 anchor HMAC derivation line** — currently states
   createSign('SHA256'), no HKDF. Flagged as stale. Not corrected until key
   hierarchy is locked.

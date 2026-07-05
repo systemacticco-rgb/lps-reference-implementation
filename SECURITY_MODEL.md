@@ -68,6 +68,23 @@ The v0.1 baseline assumes:
 - the implementation uses audited libraries only
 - the registry is not the source of truth; it is a recovery path
 - current v0.1 behavior is the authoritative implementation unless a proposal is explicitly marked as future work
+- canonicalization determinism (which `cbor` encoding behavior produced
+  a given manifest's signed bytes) is currently guaranteed only by
+  `package-lock.json` pinning every environment to the same exact
+  resolved version — not by version-string pinning in `package.json`
+  itself. This is sufficient only as long as the current reference
+  implementation is the sole verifier of its own signatures. It stops
+  being sufficient once dependencies are upgraded and independent
+  parties need to verify manifests signed under a prior version.
+  PROPOSAL 005's cross-copy reconstruction path makes this a harder
+  problem, not just a relevant one: reconstruction requires re-deriving
+  canonical bytes from recovered fragments, and tagging the manifest
+  with a canonicalization-version field creates a circular trust
+  problem — the verifier cannot know which encoder to use without
+  first trusting the field that names it, and cannot trust that field
+  without already having verified it. No resolution is adopted yet.
+  This must be decided before PROPOSAL 005 ships, or before any
+  working-group feedback requires an answer sooner.
 
 ## Invariants
 

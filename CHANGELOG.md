@@ -163,6 +163,26 @@ This changelog records architectural, security, and documentation changes for th
   - injection_detected
   - reconstruction_corrupted
 
+  ## 2026-07-05 — SIGNING_ENABLED killswitch implemented
+
+- Found: SPEC §3 specified a SIGNING_ENABLED environment-variable
+  check as a global constraint on signManifest() — "checked first...
+  before any key access" — but no code implemented it. Confirmed via
+  full-repo grep: zero references outside SPEC.md itself.
+- Decision: implement as a genuine operational killswitch, not
+  decorative. Distinct from key-existence handling (the existing
+  try/catch around private.pem, unchanged) — this gates whether
+  signing is permitted to run at all, independent of whether the
+  key file resolves.
+- Fix: guard clause added as the first statement in signManifest(),
+  throwing before either readFileSync call if SIGNING_ENABLED !== 'true'.
+- SPEC §3 line retagged [BUILT — 2026-07-05], closing the tagging
+  gap where an unmarked invariant sat in a SECURITY-CRITICAL section
+  with no enforcement.
+- Not yet done: no test file covers this path. testSigning.mjs should
+  gain a case confirming signManifest() throws when SIGNING_ENABLED
+  is unset or false, and succeeds when set to 'true'.
+
 ## Change-log rule
 
 If a feature is not explicitly marked as built, treat it as specified or planned rather than implemented.
