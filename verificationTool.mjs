@@ -158,20 +158,9 @@ export async function verifyManifest(embeddedText) {
       };
     }
 
-    const lengthDelta = Math.abs(receivedLength - signedLength);
-    const withinThreshold = signedLength > 0
-      ? (lengthDelta / signedLength) <= 0.10
-      : lengthDelta === 0;
-
-    if (!withinThreshold) {
-      return {
-        status: 'failed',
-        reason: 'Visible text was modified after signing — content hash does not match. Original manifest withheld: received text length differs from signed text length beyond the disclosure threshold.',
-        signed_at: signedManifest.signed_at ?? null,
-        algorithm: signedManifest.algorithm ?? null
-      };
-    }
-
+    // disclose === true here — evaluateDisclosureThreshold() already made
+    // the threshold decision above. Do not recompute it; there is exactly
+    // one source of truth for this decision.
     return {
       status: 'failed',
       reason: 'Visible text was modified after signing — content hash does not match',
@@ -243,7 +232,3 @@ export async function verifyManifest(embeddedText) {
  * internals that don't reflect any real call path.
  */
 
-console.log("\n--- [D.6 regression] text_length missing — guard fires, not NaN fallthrough ---");
-console.log("SKIPPED — no code path in this codebase produces a manifest without text_length.");
-console.log("Guard is present in verificationTool.mjs STEP 4 (see D.1 comment in source).");
-console.log("Revisit only if a legacy-manifest migration path is ever introduced.");

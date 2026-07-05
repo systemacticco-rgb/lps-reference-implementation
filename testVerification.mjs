@@ -88,6 +88,32 @@ console.log('--- Adversarial test: tampered text ---');
 const tamperedText = embeddedText + " TAMPERED";
 const tamperedResult = await verifyManifest(tamperedText);
 console.log(JSON.stringify(tamperedResult, null, 2));
+console.log(
+  tamperedResult.status === 'failed' && tamperedResult.original_manifest === undefined
+    ? 'PASS' : 'FAIL',
+  '(extreme-mismatch: failed status, original_manifest withheld)'
+);
+
+/*
+ * [K.1] SMALL-EDIT DISCLOSE CASE
+ * A single-character edit on the 50-character visibleText is a ~2%
+ * length delta — well under the 10% threshold. This is the exact
+ * path that was broken (H.5): evaluateDisclosureThreshold() correctly
+ * returns disclose: true, but the dead duplicate code in
+ * verificationTool.mjs referenced undeclared variables at that point
+ * and would have thrown ReferenceError before this fix. This case
+ * exercises the real pipeline, not the isolated pure-function calls
+ * below, because the isolated calls never reach that code path.
+ */
+console.log('\n--- Small-edit test: disclose expected ---');
+const smallEditText = embeddedText + "!";
+const smallEditResult = await verifyManifest(smallEditText);
+console.log(JSON.stringify(smallEditResult, null, 2));
+console.log(
+  smallEditResult.status === 'failed' && smallEditResult.original_manifest !== undefined
+    ? 'PASS' : 'FAIL',
+  '(small-edit: failed status, original_manifest disclosed)'
+);
 
 })();
 // The entire async block is wrapped in an immediately invoked async function
@@ -154,3 +180,8 @@ console.log("\n--- Case 4b: zero-length signed text, any mismatch ---");
 }
 
 console.log("\n=== End evaluateDisclosureThreshold unit tests ===");
+
+console.log("\n--- [D.6 regression] text_length missing — guard fires, not NaN fallthrough ---");
+console.log("SKIPPED — no code path in this codebase produces a manifest without text_length.");
+console.log("Guard is present in verificationTool.mjs STEP 4 (see D.1 comment in source).");
+console.log("Revisit only if a legacy-manifest migration path is ever introduced.");

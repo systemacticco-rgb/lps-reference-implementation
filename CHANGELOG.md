@@ -2,6 +2,42 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
+## 2026-07-04 (7:31pm) — Disclosure-threshold call-site defect fixed
+
+- Found: the disclose-branch in `verificationTool.mjs` STEP 4 contained
+  a dead duplicate of `evaluateDisclosureThreshold()`'s decision logic —
+  a second `lengthDelta`/`withinThreshold` computation using
+  `receivedLength`/`signedLength`, names that were never declared in
+  that scope (they exist only as parameter names inside
+  `evaluateDisclosureThreshold()`).
+- Impact: any real small-edit input (delta within the 10% threshold)
+  reaching that branch would have thrown an unhandled `ReferenceError`
+  instead of returning `failed` with `original_manifest` disclosed.
+  This was the exact small-edit path the 2026-07-03 (11:18pm) refactor
+  below was meant to make testable — the pure function was tested and
+  correct; the call site consuming its result was not.
+- Cause: leftover from the extraction below. When the inline logic was
+  pulled into `evaluateDisclosureThreshold()`, the original inline copy
+  should have been deleted from the STEP 4 call site and was not.
+- Fix: removed the dead duplicate entirely. The call site now returns
+  directly on `evaluateDisclosureThreshold()`'s `disclose: true` result
+  with no recomputation. One source of truth for this decision.
+- Tests: two new pipeline-level cases added to `testVerification.mjs`,
+  both run through the real `generateManifest → signManifest →
+  embedManifest → verifyManifest` pipeline, not the isolated pure-
+  function calls:
+  - small-edit (2% length delta): `failed` status, `original_manifest`
+    disclosed. Confirmed passing in the real environment.
+  - extreme-mismatch (18% length delta): `failed` status,
+    `original_manifest` withheld. Confirmed passing in the real
+    environment — this case previously only logged output with no
+    assertion; it now asserts explicitly.
+- The 2026-07-03 (11:18pm) entry below is scoped correctly for the pure
+  function it describes. Its "verified passing in the real
+  implementation environment" claim did not extend to this call site,
+  which is why this entry exists separately rather than editing that
+  one.
+
 ## 2026-07-03 (11:18pm) — Disclosure-threshold testability refactor
 - Extracted the D.6 length-mismatch disclosure decision out of
   `verifyManifest()`'s inline STEP 4 logic into a standalone exported

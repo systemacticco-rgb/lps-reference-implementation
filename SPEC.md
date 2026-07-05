@@ -693,14 +693,16 @@ Corrupted signal — returns degraded.
 - anchor_only state — not yet tested
 - partial_recovery state — not yet tested
 - Cross-copy seq deduplication logic — not yet tested
-- Replay attack detection — failed state with extreme
-  text length mismatch must not return original_manifest.
+- [Closed 2026-07-04] Replay attack detection — failed state
+  with extreme text length mismatch must not return
+  original_manifest. Confirmed passing in testVerification.mjs
+  (18% delta case). See CHANGELOG.md 2026-07-04 (7:31pm) entry.
 - injection_detected state — conflicting certificates
   across chunk assemblies.
 - anchor_layer: absent flag — verified manifest with
   no surviving anchors.
 - HMAC timing safety — verify crypto.timingSafeEqual()
-  used in all comparison paths.
+  used in all comparison paths.x
 - Registry input validation — invalid hash format,
   invalid generating_id format, rate limit enforcement.
 - Chunk 001 extended payload — verify 40-byte slice

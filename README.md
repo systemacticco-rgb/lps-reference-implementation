@@ -188,10 +188,21 @@ node testConfidenceFallback.mjs
 All seven tests passing as of July 3, 2026. If any test fails after a change,
 do not commit. Resolve the failure first.
 
-Outstanding test gaps are tracked in SPEC.md §8. The two most immediate:
-- testVerification.mjs needs two new cases for the D.6 text_length threshold:
-  extreme-mismatch failed state must not return original_manifest, small-edit
-  failed state must return it.
+[2026-07-04 7:31pm] The two D.6 text_length threshold cases below were not
+ordinary coverage gaps. Their absence was hiding a live defect: the
+disclose-branch in verificationTool.mjs's STEP 4 contained a dead duplicate
+of evaluateDisclosureThreshold()'s decision logic, referencing undeclared
+variables. Any real small-edit input reaching that branch would have thrown
+an unhandled ReferenceError instead of returning a failed status with
+original_manifest disclosed. The duplicate has been removed — the call site
+now uses evaluateDisclosureThreshold()'s decision directly, with no
+recomputation. Both cases have been added to testVerification.mjs and
+confirmed passing in the real environment: small-edit (2% delta) discloses
+original_manifest as expected; extreme-mismatch (18% delta) withholds it as
+expected. See CHANGELOG.md 2026-07-04 (7:31pm) entry for the full defect
+record.
+
+Remaining outstanding test gap, tracked in SPEC.md §8:
 - Registry input validation cases: invalid hash format, invalid generating_id,
   rate limit enforcement (not yet built).
 
