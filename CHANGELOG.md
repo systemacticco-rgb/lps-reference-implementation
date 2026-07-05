@@ -28,15 +28,31 @@ This changelog records architectural, security, and documentation changes for th
   function calls:
   - small-edit (2% length delta): `failed` status, `original_manifest`
     disclosed. Confirmed passing in the real environment.
-  - extreme-mismatch (18% length delta): `failed` status,
-    `original_manifest` withheld. Confirmed passing in the real
-    environment — this case previously only logged output with no
-    assertion; it now asserts explicitly.
-- The 2026-07-03 (11:18pm) entry below is scoped correctly for the pure
-  function it describes. Its "verified passing in the real
-  implementation environment" claim did not extend to this call site,
-  which is why this entry exists separately rather than editing that
-  one.
+  - large-mismatch (fixed-string tamper landing beyond the 10%
+    threshold): `failed` status, `original_manifest` withheld.
+    Confirmed passing in the real environment — this case previously
+    only logged output with no assertion; it now asserts explicitly.
+## 2026-07-05 (later) — Run 1 assertion strengthened to check segment content
+
+- Found: testVerification.mjs's Run 1 assertion (the clean-verification
+  case) only checked that `result.status === 'verified'` and that
+  `result.segments` was an array. It did not check what was inside
+  that array. A pipeline bug that scrambled segment values — wrong
+  origin, wrong offsets, wrong confidence — while still returning
+  `status: 'verified'` and some array called `segments` would have
+  passed this assertion undetected.
+- Fix: assertion rewritten to compare each returned segment's
+  `segment_id`, `origin`, `start_offset`, `end_offset`, `confidence`,
+  and `ai_tool` against the known input values used to build the test
+  manifest.
+- Along the way: confirmed that `manifestGenerator.mjs` intentionally
+  normalizes confidence to a 0–100 integer scale — a 0–1 decimal input
+  like 0.95 is detected and converted to 95. This is existing, correct
+  behavior, not a defect. The first version of this stronger assertion
+  incorrectly expected the pre-normalization decimal value and failed
+  for that reason alone; corrected to expect the normalized integer.
+- Confirmed passing against real console output from the actual
+  pipeline, not a sandbox run.
 
 ## 2026-07-03 (11:18pm) — Disclosure-threshold testability refactor
 - Extracted the D.6 length-mismatch disclosure decision out of
@@ -179,9 +195,13 @@ This changelog records architectural, security, and documentation changes for th
 - SPEC §3 line retagged [BUILT — 2026-07-05], closing the tagging
   gap where an unmarked invariant sat in a SECURITY-CRITICAL section
   with no enforcement.
-- Not yet done: no test file covers this path. testSigning.mjs should
-  gain a case confirming signManifest() throws when SIGNING_ENABLED
-  is unset or false, and succeeds when set to 'true'.
+- Test coverage: three cases added to testSigning.mjs — unset,
+  explicitly 'false', and 'true'. First two assert the exact
+  killswitch error message and confirm the guard fires by strict
+  string equality (not truthy/falsy — '1', 'yes', and '' all fail
+  closed). Third confirms the guard does not block signing when
+  enabled, restoring the original SIGNING_ENABLED value afterward
+  regardless of outcome. Confirmed passing.
 
 ## Change-log rule
 

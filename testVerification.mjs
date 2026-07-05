@@ -56,15 +56,40 @@ const embeddedText = embedManifest(visibleText, signedManifest);
 console.log('--- Verification result ---');
 const result = await verifyManifest(embeddedText);
 console.log(JSON.stringify(result, null, 2));
+
+const expectedSegments = [
+  { segment_id: 1, origin: 'human', start_offset: 0, end_offset: 21, confidence: 95 },
+  { segment_id: 2, origin: 'ai_generated', start_offset: 22, end_offset: 49, confidence: 88, ai_tool: 'claude-sonnet' }
+];
+
+const segmentsMatch = Array.isArray(result.segments)
+  && result.segments.length === expectedSegments.length
+  && expectedSegments.every((expected, i) => {
+    const actual = result.segments[i];
+    return actual
+      && actual.segment_id === expected.segment_id
+      && actual.origin === expected.origin
+      && actual.start_offset === expected.start_offset
+      && actual.end_offset === expected.end_offset
+      && actual.confidence === expected.confidence
+      && (expected.ai_tool === undefined || actual.ai_tool === expected.ai_tool);
+  });
+
 console.log(
-  result.status === 'verified' && Array.isArray(result.segments)
+  result.status === 'verified' && segmentsMatch
     ? 'PASS' : 'FAIL',
-  '(clean verification: verified status, segments present)'
+  '(clean verification: verified status, segment content matches input — origin, offsets, confidence, ai_tool)'
 );
 
 /*
  * [J.4] RUN 2 — THE ADVERSARIAL TEST
- * " TAMPERED" is appended directly to embeddedText.
+ * " TAMPERED" is appended directly to embeddedText — a fixed-string
+ * append, not a delta calculated against any target percentage. On
+ * this test's specific visibleText length, it lands past the 10%
+ * disclosure threshold, which is what this case is actually checking:
+ * a large enough mismatch that original_manifest is withheld. It is
+ * not a controlled "18% delta" case — that number should not appear
+ * elsewhere describing this test.
  * The invisible signal is still inside the text — it was not removed.
  * The signed manifest is still there — it was not altered.
  * But the visible text is now different from the text that was hashed
@@ -96,7 +121,7 @@ console.log(JSON.stringify(tamperedResult, null, 2));
 console.log(
   tamperedResult.status === 'failed' && tamperedResult.original_manifest === undefined
     ? 'PASS' : 'FAIL',
-  '(extreme-mismatch: failed status, original_manifest withheld)'
+  '(large-mismatch: failed status, original_manifest withheld — beyond 10% threshold)'
 );
 
 /*
