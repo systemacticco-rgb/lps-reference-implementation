@@ -254,4 +254,3 @@ export async function verifyManifest(embeddedText) {
  * explicitly rather than forcing an artificial test through
  * internals that don't reflect any real call path.
  */
-

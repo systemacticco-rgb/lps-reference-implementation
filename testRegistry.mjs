@@ -16,11 +16,10 @@ import { registerContent, queryRegistry } from './registryClient.mjs';
 import crypto from 'crypto';
 const contentHash = crypto.randomBytes(32).toString('hex');
 const generatingId = 'test-generator-v0.1';
-// Fixed values — not real hashes, not real IDs.
+// Random 64-character hex hash generated fresh per run.
 // contentHash must be exactly 64 lowercase hex characters — validated
 // by registerContent() before any Supabase insert runs (D.1).
-// Fixed value used here for readability; all 'a' is valid hex.
-
+// Using crypto.randomBytes(32) avoids stale-row collisions across runs.
 /*
  * [K.2] TEST 1 — registerContent()
  * Calls registerContent() with the fixed hash and generator ID.
@@ -30,7 +29,7 @@ const generatingId = 'test-generator-v0.1';
  *
  * What to look for in the output:
  *   token       — starts with "lps_" followed by 32 hex characters.
- *   content_hash — "abc123testhash" exactly as passed in.
+*   content_hash — the 64-character hex hash generated at line 17, exactly as passed in.
  *   generating_id — "test-generator-v0.1" exactly as passed in.
  *   created_at  — a real ISO timestamp from the database.
  *

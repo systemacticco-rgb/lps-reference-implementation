@@ -41,11 +41,13 @@ export function signManifest(manifest) {
     );
 
     const certFingerprint = createHash('sha256').update(certificate, 'utf8').digest('hex');
-
+    
+    console.log('Signer fingerprint:', certFingerprint);
+    
     return {
       manifest,
       signature,
-      cert_url: 'https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem',
+      cert_url: 'file://' + process.cwd() + '/cert.pem',
       cert_fingerprint: certFingerprint,
       algorithm: 'es256',
       signed_at: new Date().toISOString()

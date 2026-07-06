@@ -819,6 +819,26 @@ These must be resolved before building the signing layer:
       rendering, format conversion — without adversarial intent.
       Needs working group input before the flag can carry
       forensic weight.
+
+- [x] Canonical key generation command — LOCKED
+      Private key must be generated using OpenSSL 3.x with
+      the P-256 named curve. The generated key must use
+      named-curve encoding (ASN1 OID: prime256v1 /
+      NIST CURVE: P-256), which is compatible with
+      Node.js crypto. Keys generated with LibreSSL that
+      encode explicit EC parameters are not supported.
+
+      Generation:
+      openssl genpkey -algorithm EC \
+        -pkeyopt ec_paramgen_curve:P-256 -out private.pem
+
+      Verification:
+      openssl pkey -in private.pem -text -noout
+
+      Expected output includes:
+      Private-Key: (256 bit)
+      ASN1 OID: prime256v1
+      NIST CURVE: P-256
 ---
 
 ## 10. Change Log
