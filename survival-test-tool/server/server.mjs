@@ -1,3 +1,17 @@
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+try {
+  const env = readFileSync(join(__dirname, '.env'), 'utf8');
+  for (const line of env.split('\n')) {
+    const [key, value] = line.split('=');
+    if (key && value) process.env[key.trim()] = value.trim();
+  }
+} catch {
+  // no .env file present, rely on environment
+}
 import { createServer } from 'http';
 import { pathToFileURL } from 'url';
 import { createRateLimiter, RATE_LIMIT_REQUESTS_PER_WINDOW, RATE_LIMIT_WINDOW_MS } from './rateLimiter.mjs';
