@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { pathToFileURL } from 'url';
-import { createRateLimiter, PROVISIONAL_RATE_LIMIT_REQUESTS_PER_WINDOW, PROVISIONAL_RATE_LIMIT_WINDOW_MS } from './rateLimiter.mjs';
+import { createRateLimiter, RATE_LIMIT_REQUESTS_PER_WINDOW, RATE_LIMIT_WINDOW_MS } from './rateLimiter.mjs';
 import { handleSignRoute } from './signRoute.mjs';
 import { handleVerifyRoute } from './verifyRoute.mjs';
 
@@ -8,8 +8,8 @@ export const SURVIVAL_TOOL_PORT = Number(process.env.SURVIVAL_TOOL_PORT ?? 8787)
 export const SURVIVAL_TOOL_FRONTEND_ORIGIN = process.env.SURVIVAL_TOOL_FRONTEND_ORIGIN ?? 'http://localhost:8080';
 
 const rateLimit = createRateLimiter({
-  requestsPerWindow: PROVISIONAL_RATE_LIMIT_REQUESTS_PER_WINDOW,
-  windowMs: PROVISIONAL_RATE_LIMIT_WINDOW_MS,
+  requestsPerWindow: RATE_LIMIT_REQUESTS_PER_WINDOW,
+  windowMs: RATE_LIMIT_WINDOW_MS,
 });
 
 export function createSurvivalTestServer() {

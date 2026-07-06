@@ -94,6 +94,21 @@ textarea:focus-visible {
   letter-spacing: 0;
 }
 
+.error-banner {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--thermal-mid);
+  border-radius: 8px;
+  color: var(--type-primary);
+  background: var(--thermal-outer);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.error-banner[hidden] {
+  display: none;
+}
+
 .survival-grid {
   display: grid;
   grid-template-columns: 1fr;

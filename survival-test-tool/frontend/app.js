@@ -4,64 +4,7 @@ The model then proposed three concise alternatives for the middle section.
 
 I revised the selected model draft for tone, removed an unsupported claim, and added the final sentence myself.`;
 
-const mockSignResponse = {
-  signed_text: `${sampleText}
-
-[[LPS_MANIFEST:demo-survival-test-v1:eyJtYW5pZmVzdCI6Im1vY2stb25seSJ9]]`,
-};
-
-const mockVerifyResponse = {
-  status: "verified",
-  reason_string: "signature_intact_manifest_survived_round_trip",
-  headline: "Verified - this text's provenance signature is intact",
-  explanation: "The pasted text still matches the embedded provenance manifest returned by the demo signer.",
-  proportions: {
-    human: 46,
-    ai_generated: 34,
-    ai_modified_human: 20,
-  },
-  segments: [
-    {
-      segment_id: "seg-001",
-      origin: "human",
-      start_offset: 0,
-      end_offset: 75,
-      confidence: 0.98,
-      confidence_source: "manifest_signature",
-      ai_tool: "none",
-    },
-    {
-      segment_id: "seg-002",
-      origin: "ai_generated",
-      start_offset: 77,
-      end_offset: 145,
-      confidence: 0.96,
-      confidence_source: "manifest_signature",
-      ai_tool: "demo-model",
-    },
-    {
-      segment_id: "seg-003",
-      origin: "ai_modified_human",
-      start_offset: 147,
-      end_offset: 248,
-      confidence: 0.94,
-      confidence_source: "manifest_signature",
-      ai_tool: "demo-model",
-      modification_degree: "moderate",
-    },
-  ],
-  embedding_method_used: "A.8",
-  algorithm: "LPS-DEMO-Ed25519",
-  signed_at: "2026-07-05T12:00:00Z",
-  compressed_manifest_byte_sizes: {
-    canonical_manifest: 812,
-    compressed_manifest: 354,
-    embedded_payload: 488,
-  },
-  disclosure_threshold_outcome: "passed",
-  cert_fingerprint: "SHA256:9A:3C:72:4F:B9:18:CD:0E:67:44:21:AB:E5:30:91:7D",
-  cert_url: "https://example.invalid/lps/demo-cert.pem",
-};
+const SURVIVAL_TOOL_SERVER_ORIGIN = "http://localhost:8787";
 
 const signInput = document.querySelector("#sign-input");
 const signedOutput = document.querySelector("#signed-output");
@@ -79,8 +22,53 @@ const technicalList = document.querySelector("#technical-list");
 const segmentTableBody = document.querySelector("#segment-table-body");
 const tabs = Array.from(document.querySelectorAll(".report-tab"));
 const panels = Array.from(document.querySelectorAll("[role='tabpanel']"));
+const errorBanner = document.querySelector("#error-banner");
 
 let copyTimerId = 0;
+
+function showError(message) {
+  if (!errorBanner) {
+    console.error(message);
+    return;
+  }
+  setText(errorBanner, message);
+  errorBanner.hidden = false;
+}
+
+function clearError() {
+  if (!errorBanner) {
+    return;
+  }
+  setText(errorBanner, "");
+  errorBanner.hidden = true;
+}
+
+async function callSurvivalToolRoute(path, payload) {
+  let response;
+
+  try {
+    response = await fetch(`${SURVIVAL_TOOL_SERVER_ORIGIN}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (networkError) {
+    throw new Error(`Could not reach the survival-test server at ${SURVIVAL_TOOL_SERVER_ORIGIN}. Is it running?`);
+  }
+
+  let body;
+  try {
+    body = await response.json();
+  } catch {
+    throw new Error(`Server returned a non-JSON response (status ${response.status}).`);
+  }
+
+  if (!response.ok) {
+    throw new Error(body?.error ?? `Request failed with status ${response.status}.`);
+  }
+
+  return body;
+}
 
 function setText(element, value) {
   element.textContent = String(value);
@@ -99,9 +87,19 @@ function createValueSpan(value) {
   return span;
 }
 
-function signText() {
-  signedOutput.value = mockSignResponse.signed_text;
-  verifyInput.value = mockSignResponse.signed_text;
+async function signText() {
+  clearError();
+  signButton.disabled = true;
+
+  try {
+    const result = await callSurvivalToolRoute("/sign", { text: signInput.value });
+    signedOutput.value = result.signed_text;
+    verifyInput.value = result.signed_text;
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    signButton.disabled = false;
+  }
 }
 
 function setCopyState(isCopied) {
@@ -170,15 +168,17 @@ function renderTechnicalDetails(report) {
   addTechnicalRow("algorithm", report.algorithm);
   addTechnicalRow("signed_at", report.signed_at);
 
-  Object.entries(report.compressed_manifest_byte_sizes).forEach(([stage, bytes]) => {
-    addTechnicalRow(`compressed manifest byte size - ${stage}`, `${bytes} bytes`);
-  });
+  if (report.compressed_manifest_byte_sizes) {
+    Object.entries(report.compressed_manifest_byte_sizes).forEach(([stage, bytes]) => {
+      addTechnicalRow(`compressed manifest byte size - ${stage}`, `${bytes} bytes`);
+    });
+  }
 
   addTechnicalRow("disclosure-threshold outcome", report.disclosure_threshold_outcome);
   addTechnicalRow("cert_fingerprint", report.cert_fingerprint);
   addTechnicalRow("cert_url", report.cert_url);
 
-  report.segments.forEach((segment) => {
+  (report.segments ?? []).forEach((segment) => {
     const row = document.createElement("tr");
     row.className = "segment-table__row";
 
@@ -231,8 +231,22 @@ function moveTabFocus(currentIndex, direction) {
   selectTab(tabs[nextIndex]);
 }
 
+async function verifyText() {
+  clearError();
+  verifyButton.disabled = true;
+
+  try {
+    const report = await callSurvivalToolRoute("/verify", { text: verifyInput.value });
+    renderReport(report);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    verifyButton.disabled = false;
+  }
+}
+
 signButton.addEventListener("click", signText);
-verifyButton.addEventListener("click", () => renderReport(mockVerifyResponse));
+verifyButton.addEventListener("click", verifyText);
 copyButton.addEventListener("click", copySignedOutput);
 
 tabs.forEach((tab, index) => {
@@ -263,4 +277,3 @@ tabs.forEach((tab, index) => {
 });
 
 signInput.value = sampleText;
-signText();

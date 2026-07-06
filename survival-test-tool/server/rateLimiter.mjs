@@ -1,9 +1,9 @@
-export const PROVISIONAL_RATE_LIMIT_REQUESTS_PER_WINDOW = 60;
-export const PROVISIONAL_RATE_LIMIT_WINDOW_MS = 60_000;
+export const RATE_LIMIT_REQUESTS_PER_WINDOW = 60;
+export const RATE_LIMIT_WINDOW_MS = 60_000;
 
 export function createRateLimiter({
-  requestsPerWindow = PROVISIONAL_RATE_LIMIT_REQUESTS_PER_WINDOW,
-  windowMs = PROVISIONAL_RATE_LIMIT_WINDOW_MS,
+  requestsPerWindow = RATE_LIMIT_REQUESTS_PER_WINDOW,
+  windowMs = RATE_LIMIT_WINDOW_MS,
 } = {}) {
   const buckets = new Map();
 
@@ -17,6 +17,7 @@ export function createRateLimiter({
 
     bucket.count += 1;
     buckets.set(ipAddress, bucket);
+    
 
     pruneExpiredBuckets(buckets, now);
 
@@ -37,3 +38,4 @@ function pruneExpiredBuckets(buckets, now) {
     }
   }
 }
+

@@ -3,3 +3,4 @@ private.pem
 node_modules
 .DS_Storesurvival-test-tool/demo-keys/demo-private-key.pem
 survival-test-tool/demo-keys/demo-private-key.pem
+.DS_Store
