@@ -1,8 +1,8 @@
 export const ALLOWED_CERT_SOURCES = Object.freeze([
   {
-    hostname: 'raw.githubusercontent.com',
-    pathPrefix: '/systemacticco-rgb/lps-reference-implementation/',
-  },
+  hostname: 'raw.githubusercontent.com',
+  pathPrefix: '/systemacticco-rgb/lps-certificates/',
+},
   {
     hostname: 'systemacticco-rgb.github.io',
     pathPrefix: '/lps-demo-certificates/survival-test-tool/',
@@ -11,6 +11,7 @@ export const ALLOWED_CERT_SOURCES = Object.freeze([
 
 export function validateCertUrl(certUrl) {
   let parsedUrl;
+
 
   try {
     parsedUrl = new URL(certUrl);
