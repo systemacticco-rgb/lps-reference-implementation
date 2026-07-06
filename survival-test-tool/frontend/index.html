@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LPS Survival-Test Tool</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main class="survival-shell" aria-labelledby="tool-title">
+      <header class="survival-header">
+        <p class="survival-header__eyebrow">LPS demo tool</p>
+        <h1 class="survival-header__title" id="tool-title">Survival-Test Tool</h1>
+      </header>
+
+      <section class="survival-grid" aria-label="Survival test workflow">
+        <section class="sign-panel" aria-labelledby="sign-title">
+          <div class="panel-heading">
+            <p class="panel-heading__step">Step 1</p>
+            <h2 class="panel-heading__title" id="sign-title">Sign input</h2>
+          </div>
+          <label class="field-label" for="sign-input">Text to sign</label>
+          <textarea class="sign-panel__input" id="sign-input" spellcheck="true"></textarea>
+          <button class="button button--primary" id="sign-button" type="button">Sign text</button>
+        </section>
+
+        <section class="signed-panel" aria-labelledby="signed-title">
+          <div class="panel-heading">
+            <p class="panel-heading__step">Step 2</p>
+            <h2 class="panel-heading__title" id="signed-title">Signed output</h2>
+          </div>
+          <div class="signed-panel__output-wrap">
+            <label class="field-label" for="signed-output">Returned text with embedded manifest</label>
+            <textarea class="signed-panel__output" id="signed-output" readonly></textarea>
+            <button class="copy-button" id="copy-button" type="button" aria-label="Copy signed output">
+              <span class="copy-button__icon copy-button__icon--copy" aria-hidden="true"></span>
+              <span class="copy-button__icon copy-button__icon--check" aria-hidden="true"></span>
+              <span class="copy-button__label" id="copy-label">Copy</span>
+            </button>
+          </div>
+          <p class="copy-status" id="copy-status" aria-live="polite"></p>
+        </section>
+
+        <section class="verify-panel" aria-labelledby="verify-title">
+          <div class="panel-heading">
+            <p class="panel-heading__step">Step 3</p>
+            <h2 class="panel-heading__title" id="verify-title">Verify input</h2>
+          </div>
+          <label class="field-label" for="verify-input">Text to check</label>
+          <textarea class="verify-panel__input" id="verify-input" spellcheck="true"></textarea>
+          <button class="button button--primary" id="verify-button" type="button">Verify text</button>
+        </section>
+
+        <section class="report-panel report-panel--hidden" id="report-panel" aria-labelledby="report-title">
+          <div class="panel-heading">
+            <p class="panel-heading__step">Step 4</p>
+            <h2 class="panel-heading__title" id="report-title">Report</h2>
+          </div>
+
+          <div class="report-tabs" role="tablist" aria-label="Verification report">
+            <button class="report-tab report-tab--active" id="result-tab" type="button" role="tab" aria-selected="true" aria-controls="result-panel" tabindex="0">Result</button>
+            <button class="report-tab" id="technical-tab" type="button" role="tab" aria-selected="false" aria-controls="technical-panel" tabindex="-1">Technical details</button>
+          </div>
+
+          <section class="result-report" id="result-panel" role="tabpanel" aria-labelledby="result-tab" tabindex="0">
+            <h3 class="result-report__headline" id="result-headline"></h3>
+            <p class="result-report__explanation" id="result-explanation"></p>
+            <div class="proportion-readout" id="proportion-readout" aria-label="AI and human proportion readout"></div>
+          </section>
+
+          <section class="technical-report technical-report--hidden" id="technical-panel" role="tabpanel" aria-labelledby="technical-tab" tabindex="0" hidden>
+            <dl class="technical-list" id="technical-list"></dl>
+            <div class="segment-table-wrap">
+              <table class="segment-table">
+                <caption class="segment-table__caption">Per-segment breakdown</caption>
+                <thead class="segment-table__head">
+                  <tr class="segment-table__row">
+                    <th class="segment-table__cell segment-table__cell--heading" scope="col">segment_id</th>
+                    <th class="segment-table__cell segment-table__cell--heading" scope="col">origin</th>
+                    <th class="segment-table__cell segment-table__cell--heading" scope="col">start_offset</th>
+                    <th class="segment-table__cell segment-table__cell--heading" scope="col">end_offset</th>
+                    <th class="segment-table__cell segment-table__cell--heading" scope="col">confidence</th>
+                    <th class="segment-table__cell segment-table__cell--heading" scope="col">confidence_source</th>
+                    <th class="segment-table__cell segment-table__cell--heading" scope="col">ai_tool</th>
+                    <th class="segment-table__cell segment-table__cell--heading" scope="col">modification_degree</th>
+                  </tr>
+                </thead>
+                <tbody class="segment-table__body" id="segment-table-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

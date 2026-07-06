@@ -22,6 +22,23 @@ import { queryRegistry } from './registryClient.mjs';
 //     may be disclosed.
 //   exceeds_threshold     — delta exceeds 10%. original_manifest
 //     must be withheld.
+
+// Add near the top of verificationTool.mjs
+const ALLOWED_CERT_HOSTS = [
+  'raw.githubusercontent.com', // production: systemacticco-rgb/lps-certificates
+  // demo cert host added here once NEW-1's demo cert repo exists
+];
+
+function isAllowedCertUrl(urlString) {
+  let parsed;
+  try {
+    parsed = new URL(urlString);
+  } catch {
+    return false;
+  }
+  return parsed.protocol === 'https:' && ALLOWED_CERT_HOSTS.includes(parsed.hostname);
+}
+
 export function evaluateDisclosureThreshold({ signedLength, receivedLength }) {
   if (signedLength === undefined || signedLength === null) {
     return { disclose: false, reason: 'missing_text_length' };
@@ -88,6 +105,12 @@ export async function verifyManifest(embeddedText) {
   let signatureValid;
   let certificate;
   try {
+     if (!isAllowedCertUrl(signedManifest.cert_url)) {
+      return {
+        status: 'failed',
+        reason: 'Certificate URL not permitted — must be https and match an allowed host'
+      };
+    }
     const response = await fetch(signedManifest.cert_url);
     certificate = await response.text();
 
