@@ -40,7 +40,7 @@ export async function handleSignRoute(req, res) {
   }
 }
 
-async function signWithDemoKey(manifest) {
+export async function signWithDemoKey(manifest) {
   const { privateKey, certificate } = await loadDemoSigningMaterial();
   const manifestBuffer = canonicalBytes(manifest);
   const signer = createSign('SHA256');

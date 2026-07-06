@@ -1,5 +1,5 @@
 import { embedManifest } from './embeddingLayer.mjs';
-import { signManifest } from './signingLayer.mjs';
+import { signWithDemoKey } from './survival-test-tool/server/signRoute.mjs';
 import { generateManifest } from './manifestGenerator.mjs';
 import { verifyManifest } from './verificationTool.mjs';
 import { evaluateDisclosureThreshold } from './verificationTool.mjs';
@@ -37,7 +37,7 @@ const manifest = generateManifest({
   signedAt: new Date().toISOString()
 });
 
-const signedManifest = signManifest(manifest);
+const signedManifest = await signWithDemoKey(manifest);
 const embeddedText = embedManifest(visibleText, signedManifest);
 
 (async () => {

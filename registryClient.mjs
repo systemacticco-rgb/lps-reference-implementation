@@ -43,20 +43,23 @@ export async function registerContent({ contentHash, generatingId }) {
 export async function queryRegistry({ token, contentHash, queriedBy = null }) {
   const query_type = token ? 'token' : 'content_hash';
 
-  let query = supabase.from('registry_records').select('*');
+let query = supabase.from('registry_records').select('*');
 
   if (token) {
-    query = query.eq('token', token);
+    query = query.eq('token', token).single();
+    const { data, error } = await query;
+    if (error && error.code === 'PGRST116') return null;
+    if (error) throw new Error(`Registry query failed: ${error.message}`);
+    return data;
   } else if (contentHash) {
-    query = query.eq('content_hash', contentHash);
+    query = query.eq('content_hash', contentHash).limit(1);
+    const { data, error } = await query;
+    if (error) throw new Error(`Registry query failed: ${error.message}`);
+    if (!data || data.length === 0) return null;
+    return data[0];
   } else {
     throw new Error('queryRegistry requires token or contentHash');
   }
-
-  const { data, error } = await query.single();
-
-  if (error && error.code === 'PGRST116') return null;
-  if (error) throw new Error(`Registry query failed: ${error.message}`);
 
   await supabase.from('usage_events').insert({
     token: data.token,

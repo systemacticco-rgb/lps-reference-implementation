@@ -193,7 +193,7 @@ node testRegistryVerification.mjs
 node testConfidenceFallback.mjs
 ```
 
-All seven tests passing as of July 3, 2026. If any test fails after a change,
+All seven tests passing as of July 6, 2026. If any test fails after a change,
 do not commit. Resolve the failure first.
 
 [2026-07-04 7:31pm] The two D.6 text_length threshold cases below were not

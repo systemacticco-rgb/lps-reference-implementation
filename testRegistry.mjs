@@ -13,12 +13,13 @@ import { registerContent, queryRegistry } from './registryClient.mjs';
  * every test here fails. That is expected and correct.
  */
 
-const contentHash = 'abc123testhash';
+import crypto from 'crypto';
+const contentHash = crypto.randomBytes(32).toString('hex');
 const generatingId = 'test-generator-v0.1';
 // Fixed values — not real hashes, not real IDs.
-// The registry does not validate the format of these fields.
-// It stores whatever it receives. Using fixed strings makes the
-// output easy to read and verify in the terminal.
+// contentHash must be exactly 64 lowercase hex characters — validated
+// by registerContent() before any Supabase insert runs (D.1).
+// Fixed value used here for readability; all 'a' is valid hex.
 
 /*
  * [K.2] TEST 1 — registerContent()
