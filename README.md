@@ -154,16 +154,24 @@ SIGNING_ENABLED=true
 ```
 
 ### Key generation (first-time only)
+[UPDATED — 2026-07-06] Use genpkey, not ecparam. ecparam produces
+explicit-parameters encoding by default on LibreSSL (macOS), which
+stricter ASN.1 parsers may reject. genpkey produces named-curve
+PKCS#8 directly. See CHANGELOG.md 2026-07-06 entry.
+
 ```bash
-openssl ecparam -name prime256v1 -genkey -noout -out private_raw.pem
-openssl req -new -x509 -key private_raw.pem -out cert.pem -days 365 \
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 \
+  -out private.pem
+openssl req -new -x509 -key private.pem -out cert.pem -days 365 \
   -subj "/CN=lps-reference-implementation-v0.1" \
   -addext "subjectKeyIdentifier=hash" \
   -addext "authorityKeyIdentifier=keyid:always" \
   -addext "basicConstraints=critical,CA:FALSE"
-openssl pkcs8 -topk8 -nocrypt -in private_raw.pem -out private.pem
-rm private_raw.pem
 ```
+
+`private.pem` is gitignored. It must never be committed. `cert.pem` is
+committed for v0.1 testing only and is hosted publicly at:
+`https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem`
 
 `private.pem` is gitignored. It must never be committed. `cert.pem` is
 committed for v0.1 testing only and is hosted publicly at:

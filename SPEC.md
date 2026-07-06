@@ -270,14 +270,19 @@ Note: @contentauth/c2pa-node is used in component 3 (embedding
 Note: original c2pa-node deprecated September 2025 — do not use.
 Key format: PEM
 Certificate generation commands:
-openssl ecparam -name prime256v1 -genkey -noout -out private_raw.pem
-openssl req -new -x509 -key private_raw.pem -out cert.pem -days 365 \
+[UPDATED — 2026-07-06] Canonical key generation — named-curve PKCS#8.
+Prior commands used openssl ecparam which produces explicit-parameters
+encoding by default on LibreSSL (macOS). Node.js and panva/jose accept
+both forms, but stricter ASN.1 parsers used by external verifiers may
+reject explicit-parameters keys. Use the following commands only:
+
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 \
+  -out private.pem
+openssl req -new -x509 -key private.pem -out cert.pem -days 365 \
   -subj "/CN=lps-reference-implementation-v0.1" \
   -addext "subjectKeyIdentifier=hash" \
   -addext "authorityKeyIdentifier=keyid:always" \
   -addext "basicConstraints=critical,CA:FALSE"
-openssl pkcs8 -topk8 -nocrypt -in private_raw.pem -out private.pem
-rm private_raw.pem
 
 private.pem — gitignored, never committed.
 cert.pem — committed for v0.1 testing only.
