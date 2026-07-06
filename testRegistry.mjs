@@ -22,14 +22,14 @@ const generatingId = 'test-generator-v0.1';
 // Using crypto.randomBytes(32) avoids stale-row collisions across runs.
 /*
  * [K.2] TEST 1 — registerContent()
- * Calls registerContent() with the fixed hash and generator ID.
+ * Calls registerContent() with the freshly generated hash and generator ID.
  * The function generates a unique lps_ token, writes one row to
  * registry_records, and returns the full inserted record including
  * the database-assigned created_at timestamp.
  *
  * What to look for in the output:
  *   token       — starts with "lps_" followed by 32 hex characters.
-*   content_hash — the 64-character hex hash generated at line 17, exactly as passed in.
+ *   content_hash — the 64-character hex hash generated for this run.
  *   generating_id — "test-generator-v0.1" exactly as passed in.
  *   created_at  — a real ISO timestamp from the database.
  *

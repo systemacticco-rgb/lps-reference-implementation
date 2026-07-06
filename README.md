@@ -173,10 +173,6 @@ openssl req -new -x509 -key private.pem -out cert.pem -days 365 \
 committed for v0.1 testing only and is hosted publicly at:
 `https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem`
 
-`private.pem` is gitignored. It must never be committed. `cert.pem` is
-committed for v0.1 testing only and is hosted publicly at:
-`https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem`
-
 ---
 
 ## Running Tests

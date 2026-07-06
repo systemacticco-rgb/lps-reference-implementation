@@ -261,9 +261,10 @@ Signature encoding: IEEE P1363 (raw r‖s, 64 bytes fixed for P-256).
   and createVerify().verify() calls. Confirmed June 30 2026:
   internal round-trip (testSigning.mjs, testVerification.mjs)
   and external cross-check against the independent panva/jose
-  library both pass. Signatures produced by signingLayer.mjs
-  are genuinely interoperable with standard JOSE/COSE ES256
-  verifiers, not merely self-consistent with this codebase.
+  library both pass. The primitive signature encoding produced by
+  signingLayer.mjs matches ES256's raw r‖s expectation. LPS does
+  not currently emit JWS or COSE_Sign1 envelopes, so full
+  envelope-level JOSE/COSE interoperability remains unimplemented.
 Note: @contentauth/c2pa-node is used in component 3 (embedding
       layer) only, not for signing. Signing uses native crypto
       exclusively.
@@ -858,9 +859,10 @@ v0.1-cose-fix — June 30 2026 — corrected ES256 signature encoding.
   Fixed signatures are now exactly 64 bytes, fixed length, for
   P-256. Verified via internal test suite and an external
   cross-check against the independent jose library (panva/jose),
-  confirming genuine JOSE/COSE interoperability rather than
-  internal-only self-consistency. No persisted signed manifests
-  existed at time of fix — no migration required.
+  confirming primitive-level ES256 signature encoding compatibility
+  rather than internal-only self-consistency. Full JWS/COSE_Sign1
+  envelope interoperability remains unimplemented. No persisted
+  signed manifests existed at time of fix — no migration required.
   ---
 
 ## 11. Audit and Review History
@@ -875,7 +877,7 @@ from initial build through external review on June 30 2026.
 It was identified through external review, not through this
 project's internal audit process — stated explicitly here for
 accuracy. Fixed same day: dsaEncoding: 'ieee-p1363' added to
-sign() and verify() calls.Verified through the existing internal regression suite (testSigning.mjs and testVerification.mjs) together with an independent primitive-level interoperability cross-check against the panva/jose library. Full envelope-level
+sign() and verify() calls. Verified through the existing internal regression suite (testSigning.mjs and testVerification.mjs) together with an independent primitive-level interoperability cross-check against the panva/jose library. Full envelope-level
 (COSE_Sign1/JWS) interoperability remains unimplemented — see
 Section 9.
 
