@@ -1,5 +1,5 @@
 import { embedManifest } from './embeddingLayer.mjs';
-import { signWithDemoKey } from './survival-test-tool/server/signRoute.mjs';
+import { signManifest } from './signingLayer.mjs';
 import { generateManifest } from './manifestGenerator.mjs';
 import { verifyManifest } from './verificationTool.mjs';
 import { evaluateDisclosureThreshold } from './verificationTool.mjs';
@@ -37,7 +37,7 @@ const manifest = generateManifest({
   signedAt: new Date().toISOString()
 });
 
-const signedManifest = await signWithDemoKey(manifest);
+const signedManifest = signManifest(manifest);
 const embeddedText = embedManifest(visibleText, signedManifest);
 
 (async () => {
@@ -54,7 +54,7 @@ const embeddedText = embedManifest(visibleText, signedManifest);
  */
 
 console.log('--- Verification result ---');
-const result = await verifyManifest(embeddedText);
+const result = await verifyManifest(embeddedText, { allowLocalCert: true });
 console.log(JSON.stringify(result, null, 2));
 
 const expectedSegments = [
@@ -116,7 +116,7 @@ console.log(
 
 console.log('--- Adversarial test: tampered text ---');
 const tamperedText = embeddedText + " TAMPERED";
-const tamperedResult = await verifyManifest(tamperedText);
+const tamperedResult = await verifyManifest(tamperedText, { allowLocalCert: true });
 console.log(JSON.stringify(tamperedResult, null, 2));
 console.log(
   tamperedResult.status === 'failed' && tamperedResult.original_manifest === undefined
@@ -137,7 +137,7 @@ console.log(
  */
 console.log('\n--- Small-edit test: disclose expected ---');
 const smallEditText = embeddedText + "!";
-const smallEditResult = await verifyManifest(smallEditText);
+const smallEditResult = await verifyManifest(smallEditText, { allowLocalCert: true });
 console.log(JSON.stringify(smallEditResult, null, 2));
 console.log(
   smallEditResult.status === 'failed' && smallEditResult.original_manifest !== undefined

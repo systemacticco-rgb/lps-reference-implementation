@@ -56,6 +56,7 @@ lps-reference-implementation/
 ├── testRegistry.mjs              Registry registration and query test
 ├── testRegistryVerification.mjs  registry_required state test
 ├── testConfidenceFallback.mjs    Fallback confidence calculation test
+├── lps-local-test-server.mjs     Local editor survival-analysis rig
 ├── cert.pem                      Public certificate (v0.1 testing only)
 ├── private.pem                   Private key — GITIGNORED, never committed
 ├── .env                          Environment variables — GITIGNORED
@@ -173,6 +174,20 @@ openssl req -new -x509 -key private.pem -out cert.pem -days 365 \
 committed for v0.1 testing only and is hosted publicly at:
 `https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem`
 
+`private.pem` and `cert.pem` must be generated as a matching pair. If
+they do not match, the embedded A.8 manifest may still survive
+copy/paste, but verification will fail because the certificate public
+key cannot validate the signature produced by the private key. The
+signing layer now checks this before signing and fails with:
+
+```text
+Signing material mismatch: private.pem does not match cert.pem
+```
+
+When rotating local signing material, regenerate both files together
+using the commands above, then publish the matching `cert.pem` wherever
+`cert_url` points for that test.
+
 ---
 
 ## Running Tests
@@ -209,6 +224,39 @@ record.
 Remaining outstanding test gap, tracked in SPEC.md §8:
 - Registry input validation cases: invalid hash format, invalid generating_id,
   rate limit enforcement (not yet built).
+
+---
+
+## Local Editor Survival Testing
+
+Use `lps-local-test-server.mjs` for manual copy/paste survival analysis.
+This is the local root-pipeline rig, not the removed demo survival-test-tool.
+
+Run from the repository root:
+
+```bash
+node lps-local-test-server.mjs
+```
+
+Open:
+
+```text
+http://localhost:4173
+```
+
+Workflow:
+- Generate/sign/embed text locally.
+- Copy the embedded output into an editor or app.
+- Copy it back out of that editor or app.
+- Paste it into the verifier.
+- Record the survival row returned by the tool.
+
+The local server uses the real root modules:
+`generateManifest -> signManifest -> embedManifest -> verifyManifest`.
+It opts into local `cert.pem` verification and skips registry lookup so
+manual editor tests do not require internet certificate fetches or Supabase.
+Production verification remains stricter and should not inherit those local
+testing allowances.
 
 ---
 

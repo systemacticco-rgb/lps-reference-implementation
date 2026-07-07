@@ -80,9 +80,10 @@ try {
 }
 
 // Case 3: enabled — must proceed past the guard (may still throw later
-// for unrelated reasons, e.g. missing private.pem in this environment;
-// that is a different, acceptable failure — this case only confirms
-// the killswitch itself did not block it)
+// for unrelated reasons, e.g. missing private.pem, unreadable cert.pem,
+// or mismatched local signing material; those are different, acceptable
+// failures for this case — it only confirms the killswitch itself did
+// not block it)
 process.env.SIGNING_ENABLED = 'true';
 try {
   signManifest(manifest);

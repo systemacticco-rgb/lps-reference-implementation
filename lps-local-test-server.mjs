@@ -15,12 +15,13 @@
 //   message listing what your module actually exports, so you can
 //   tell me the correct name (no crash, server still boots).
 //
-// Needs your normal .env (Supabase keys; SIGNING_ENABLED=true).
+// Local survival testing should not require network verification.
+// SIGNING_ENABLED=true is still required for the real root signer.
 // ============================================================
 
 import { createServer } from 'http';
 import { generateManifest } from './manifestGenerator.mjs';
-import { embedManifest } from './embeddingLayer.mjs';
+import { embedManifestWithDiagnostics } from './embeddingLayer.mjs';
 import { verifyManifest } from './verificationTool.mjs';
 
 const PORT = 4173;
@@ -55,10 +56,13 @@ const server = createServer(async (req, res) => {
 
   if (req.method === 'POST' && req.url === '/api/verify') {
     try {
-      const { text } = await readBody(req);
+      const { text, source, expected } = await readBody(req);
       if (typeof text !== 'string' || !text.length) return json(res, 400, { error: 'No text provided' });
-      const result = await verifyManifest(text);
-      return json(res, 200, result);
+      const result = await verifyManifest(text, { allowLocalCert: true, skipRegistry: true });
+      return json(res, 200, {
+        ...result,
+        survival_analysis: buildSurvivalAnalysis({ result, text, source, expected })
+      });
     } catch (e) {
       return json(res, 500, { error: 'verifyManifest threw', detail: String(e && e.message || e) });
     }
@@ -88,15 +92,26 @@ const server = createServer(async (req, res) => {
       }
 
       const signed = await fn(manifest);              // sync or async both fine
-      const embedded = embedManifest(visibleText, signed);
+      const embedded = embedManifestWithDiagnostics(visibleText, signed);
 
       return json(res, 200, {
-        embedded,
+        embedded: embedded.text,
+        embedding_diagnostics: {
+          embedding_method_used: embedded.embedding_method_used,
+          manifest_byte_size: embedded.manifest_byte_size,
+          visible_text_length: embedded.visible_text_length,
+          embedded_text_length: embedded.text.length,
+          wrapper_worst_case_utf8_bytes: embedded.wrapper_worst_case_utf8_bytes ?? null,
+          structured_exclusion_start: embedded.structured_exclusion_start ?? null,
+          structured_exclusion_length: embedded.structured_exclusion_length ?? null
+        },
         signed_manifest_preview: {
           has_signature: !!(signed && signed.signature),
           cert_url: signed && signed.cert_url,
+          cert_fingerprint_present: !!(signed && signed.cert_fingerprint),
           algorithm: signed && signed.algorithm,
           text_hash: manifest.text_hash,
+          text_length: manifest.text_length,
           overall_ai_proportion: manifest.overall_ai_proportion,
           human_proportion: manifest.human_proportion,
         },
@@ -108,6 +123,42 @@ const server = createServer(async (req, res) => {
 
   res.writeHead(404); res.end('not found');
 });
+
+function buildSurvivalAnalysis({ result, text, source = {}, expected = {} }) {
+  const status = result?.status ?? 'unknown';
+  const reason = result?.reason ?? null;
+  const manifestSurvived = ['verified', 'failed'].includes(status)
+    && reason !== 'Certificate URL not permitted — must be an allowed HTTPS host or the local test cert.pem'
+    && reason !== 'Certificate URL not permitted — must be https and match an allowed host'
+    && reason !== 'Certificate fetch or signature verification failed — check network or certificate URL';
+  const signatureSurvived = status === 'verified'
+    || reason === 'Visible text was modified after signing — content hash does not match'
+    || reason === 'Visible text was modified after signing — content hash does not match. Original manifest withheld: received text length differs from signed text length beyond the disclosure threshold.';
+
+  return {
+    tested_at: new Date().toISOString(),
+    editor: cleanTextField(source.editor),
+    platform: cleanTextField(source.platform),
+    copy_path: cleanTextField(source.copyPath),
+    notes: cleanTextField(source.notes),
+    status,
+    reason,
+    manifest_survived: manifestSurvived,
+    signature_survived: signatureSurvived,
+    visible_text_changed: status === 'failed' && reason?.startsWith('Visible text was modified after signing'),
+    embedding_method_expected: cleanTextField(expected.embeddingMethod),
+    embedding_method_recovered: result?.embedding_method_used ?? null,
+    original_text_length: Number.isInteger(expected.visibleTextLength) ? expected.visibleTextLength : null,
+    pasted_text_length: text.length,
+    signed_text_length: result?.signed_text_length ?? null,
+    received_text_length: result?.received_text_length ?? null,
+    disclosure_threshold_outcome: result?.disclosure_threshold_outcome ?? null
+  };
+}
+
+function cleanTextField(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log('LPS local test rig → http://localhost:' + PORT);
@@ -136,7 +187,7 @@ const PAGE = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
  code{background:#1a1f26;padding:1px 5px;border-radius:4px;font-size:12px}
 </style></head><body>
 <h1>LPS Local Test Rig</h1>
-<p class="note">Runs your real modules. EMBED here, copy out, round-trip through a destination app, paste back into VERIFY.</p>
+<p class="note">Runs the root LPS modules locally. EMBED here, copy out, round-trip through an editor, paste back into VERIFY, then copy the survival row.</p>
 
 <div class="card">
  <h2>Embed — generate · sign · embed</h2>
@@ -157,22 +208,36 @@ const PAGE = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 
 <div class="card">
  <h2>Verify — your real verifyManifest()</h2>
+ <label>Editor / app tested</label>
+ <textarea id="editor" rows="1" placeholder="Example: Google Docs, Word, Notion, Slack"></textarea>
+ <label style="margin-top:10px">Platform</label>
+ <textarea id="platform" rows="1" placeholder="Example: macOS Chrome, iOS app, Windows desktop"></textarea>
+ <label style="margin-top:10px">Copy/paste path</label>
+ <textarea id="copyPath" rows="2" placeholder="Example: browser copy → Google Docs paste → browser copy → verifier"></textarea>
+ <label style="margin-top:10px">Notes</label>
+ <textarea id="notes" rows="2" placeholder="Optional observations"></textarea>
  <label>Paste text to verify (fresh embed, or after a round trip)</label>
  <textarea id="ver" rows="2" placeholder="Paste here…"></textarea>
  <button onclick="doVerify()">Verify</button>
  <div id="verBadge" style="margin-top:12px"></div>
  <pre id="verOut" style="display:none"></pre>
+ <label style="margin-top:10px">Survival row</label>
+ <pre id="survOut" style="display:none"></pre>
+ <button id="copySurvBtn" style="display:none" onclick="copySurvival()">Copy survival row</button>
 </div>
 
 <script>
 function post(url,obj){return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)}).then(function(r){return r.json()});}
+var lastEmbedDiagnostics=null;
+var lastSurvivalRow=null;
 function doEmbed(){
   var vis=document.getElementById('vis').value;var segRaw=document.getElementById('seg').value;var out=document.getElementById('embOut');
   var seg;try{seg=JSON.parse(segRaw);}catch(e){out.style.display='block';out.textContent='Segments JSON is invalid: '+e.message;return;}
   post('/api/embed',{visibleText:vis,segments:seg}).then(function(d){
     out.style.display='block';
     if(d.embedded){
-      out.textContent=JSON.stringify(d.signed_manifest_preview,null,2);
+      lastEmbedDiagnostics=d.embedding_diagnostics || null;
+      out.textContent=JSON.stringify({embedding_diagnostics:d.embedding_diagnostics,signed_manifest_preview:d.signed_manifest_preview},null,2);
       document.getElementById('embCopyWrap').style.display='block';
       document.getElementById('embText').value=d.embedded;
     }else{
@@ -186,11 +251,33 @@ function copyEmb(){var t=document.getElementById('embText');t.select();t.setSele
   function(){document.getElementById('cpd').textContent=' (select-all + Cmd/Ctrl-C)';});}
 function doVerify(){
   var text=document.getElementById('ver').value;var badge=document.getElementById('verBadge');var out=document.getElementById('verOut');
-  post('/api/verify',{text:text}).then(function(d){
+  var source={
+    editor:document.getElementById('editor').value,
+    platform:document.getElementById('platform').value,
+    copyPath:document.getElementById('copyPath').value,
+    notes:document.getElementById('notes').value
+  };
+  var expected={
+    embeddingMethod:lastEmbedDiagnostics && lastEmbedDiagnostics.embedding_method_used,
+    visibleTextLength:lastEmbedDiagnostics && lastEmbedDiagnostics.visible_text_length
+  };
+  post('/api/verify',{text:text,source:source,expected:expected}).then(function(d){
     out.style.display='block';out.textContent=JSON.stringify(d,null,2);
     if(d.status){badge.innerHTML='<span class="badge '+d.status+'">'+d.status.toUpperCase()+'</span>';}
     else{badge.innerHTML='';}
+    lastSurvivalRow=d.survival_analysis || null;
+    var surv=document.getElementById('survOut');
+    if(lastSurvivalRow){
+      surv.style.display='block';surv.textContent=JSON.stringify(lastSurvivalRow,null,2);
+      document.getElementById('copySurvBtn').style.display='inline-block';
+    }else{
+      surv.style.display='none';document.getElementById('copySurvBtn').style.display='none';
+    }
   }).catch(function(e){out.style.display='block';out.textContent='Request failed: '+e;});
+}
+function copySurvival(){
+  if(!lastSurvivalRow){return;}
+  navigator.clipboard.writeText(JSON.stringify(lastSurvivalRow));
 }
 </script>
 </body></html>`;

@@ -1,7 +1,37 @@
 import 'dotenv/config';
 import { readFileSync } from 'fs';
-import { createSign, createVerify, createHash } from 'crypto';
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  createSign,
+  X509Certificate
+} from 'crypto';
 import { canonicalBytes } from './compression.mjs';
+
+export function assertSigningMaterialMatches(privateKeyPem, certificatePem) {
+  let publicFromPrivate;
+  let publicFromCertificate;
+
+  try {
+    publicFromPrivate = createPublicKey(createPrivateKey(privateKeyPem))
+      .export({ type: 'spki', format: 'pem' });
+  } catch {
+    throw new Error('Signing material invalid: private.pem could not be parsed as a private key');
+  }
+
+  try {
+    publicFromCertificate = new X509Certificate(certificatePem)
+      .publicKey
+      .export({ type: 'spki', format: 'pem' });
+  } catch {
+    throw new Error('Signing material invalid: cert.pem could not be parsed as an X.509 certificate');
+  }
+
+  if (publicFromPrivate !== publicFromCertificate) {
+    throw new Error('Signing material mismatch: private.pem does not match cert.pem');
+  }
+}
 
 export function signManifest(manifest) {
   // [Y.1] SIGNING_ENABLED killswitch — checked first, before any key
@@ -28,6 +58,8 @@ export function signManifest(manifest) {
     throw new Error('Failed to read certificate file');
   }
 
+  assertSigningMaterialMatches(privateKey, certificate);
+
   try {
     const manifestBuffer = canonicalBytes(manifest);
 
@@ -41,9 +73,7 @@ export function signManifest(manifest) {
     );
 
     const certFingerprint = createHash('sha256').update(certificate, 'utf8').digest('hex');
-    
-    console.log('Signer fingerprint:', certFingerprint);
-    
+
     return {
       manifest,
       signature,

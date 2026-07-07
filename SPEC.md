@@ -288,6 +288,12 @@ openssl req -new -x509 -key private.pem -out cert.pem -days 365 \
 private.pem — gitignored, never committed.
 cert.pem — committed for v0.1 testing only.
 
+private.pem and cert.pem must be generated and rotated as a matching
+pair. The signing layer must compare the public key derived from
+private.pem with the public key inside cert.pem before signing. If they
+do not match, signing must fail closed with:
+Signing material mismatch: private.pem does not match cert.pem
+
 Certificate delivery — v0.1:
 cert.pem is not embedded in the manifest. It is hosted publicly at:
 https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem
@@ -310,6 +316,10 @@ Constraints:
   Operational killswitch only — controls whether this code path
   will sign, not whether private.pem itself is protected. See
   CHANGELOG.md 2026-07-05 entry.
+- Local signing-material consistency checked before signing. This is a
+  development safety guard, not a verifier trust-list mechanism. It
+  prevents the local pipeline from producing manifests signed by one key
+  while advertising an unrelated certificate.
 
   Why not @contentauth/c2pa-node for signing:
 @contentauth/c2pa-node is designed to sign media files — images,
@@ -343,8 +353,6 @@ same rule as the shortcode dictionary.
 Library: encypherai/c2pa-text (MIT licensed)
 Method for v0.1: Unstructured A.8 — Unicode Variation Selectors
 Reason: survives copy-paste, sufficient for proof of concept
-Fallback: Structured A.9 if compressed CBOR byte count exceeds
-220 bytes. Trigger implemented in embeddingLayer.mjs.
 Constraint: embedding and extraction are separate functions
 Constraint: never modify content during embedding
 
@@ -352,8 +360,9 @@ Extraction output format: object with properties manifest (Uint8Array),
 cleanText (string), offset (number), length (number).
 Comparison must target extracted.manifest, not extracted directly.
 
-Known limitation: Unicode variation selectors have data capacity ceiling.
-Complex manifests with many segments may require fallback method.
+Known limitation: larger manifests create longer invisible wrapper
+sequences, which may reduce editor survival in practice. This is an
+operational survival constraint, not an embedding-layer fallback trigger.
 Capacity threshold: [DEFINED — June 2026]
 First data point — component 0:
 5-byte manifest occupies 26 Unicode characters after 37 visible characters.
@@ -363,37 +372,36 @@ Raw JSON with certificate:              2026 bytes
 After certificate removal:              1219 bytes
 After shortcode compression:             843 bytes
 After CBOR encoding:                     737 bytes
-Ceiling:                                 256 bytes
+Former assumed ceiling:                  256 bytes
 
-Conclusion: 256-byte ceiling is a per-complexity constraint.
-2-3 segment manifests approach feasibility with further optimization.
-4+ segment manifests require the fallback method (Structured A.9).
-Fallback trigger: compressed manifest exceeds 220 bytes (safety margin).
+Conclusion: the previous 256-byte ceiling assumption does not apply to
+the `c2pa-text` A.8 wrapper implementation. Complex manifests remain
+testable through A.8, but produce longer invisible payloads and need
+manual survival data from target editors.
 Remaining optimization target: cert_url shortcode registry — drops
 78-byte URL to 3-4 bytes. Reserved for v0.2.
 
-Fallback method: Structured A.9 (interleaved invisible markers)
-Trigger: compressed CBOR byte count exceeds 220 bytes
-Trigger threshold chosen to maintain 36-byte safety margin
-below the 256-byte variation selector ceiling.
+Structured A.9 compatibility path:
+Structured A.9 stores manifest bytes or references in a delimited
+`data:application/c2pa;base64,...` block using host comment
+syntax. It is visible plain text and is therefore not the default
+plain-text survival-test carrier.
 
-Structured A.9 distributes invisible payload markers throughout
-the document at defined positions rather than appending one block
-at the end. Capacity scales with document length. Not subject to
-the 256-byte ceiling. Handles multi-segment and multi-round
-provenance manifests.
-
-Detection: extractManifest from c2pa-text detects method
-automatically. No flag required in the manifest.
-Verification tool requires no changes for A.9 support.
+Detection: verificationTool.mjs first tries A.8 extraction via
+extractManifest(), then tries A.9 structured extraction via
+extractStructured(). No flag is required in the manifest. The
+verification result reports embedding_method_used as A.8 or A.9.
 
 Redundant embedding — PROPOSAL 005 — post-v0.1
-One complete full manifest copy embedded per paragraph via A.9.
-Copies overlap by 25% of chunk range. Cross-copy reconstruction
-via seq number grouping. See PROPOSAL 005 for full architecture.
+One complete full manifest copy embedded per paragraph via A.8R,
+an A.8-derived redundant invisible variation-selector chunk carrier.
+A.8R is not C2PA Text A.9; A.9 remains a structured visible-text
+compatibility path only. A.8R copies overlap by 25% of chunk range.
+Cross-copy reconstruction via seq number grouping. See PROPOSAL 005
+for full architecture.
 Two new verification states defined: anchor_only, partial_recovery.
 Chunk header format: seq uint16 + total uint16 + copy_id uint8
-+ version uint8 = 6 bytes prepended to each A.9 chunk payload.
++ version uint8 = 6 bytes prepended to each A.8R chunk payload.
 
 ---
 
@@ -688,7 +696,9 @@ testEmbedding.mjs — Component 3
 testVerification.mjs — Component 4
   Confirms: verified state on clean text, failed state
   on tampered text, original_manifest returned on
-  text hash mismatch.
+  text hash mismatch. Local test mode may allow the repository
+  cert.pem file URL explicitly so local survival testing does not
+  depend on public certificate fetches.
 
 testRegistry.mjs — registryClient.mjs
   Confirms: registerContent() generates correct token format,
@@ -715,7 +725,9 @@ Corrupted signal — returns degraded.
 
 ### Outstanding test gaps
 - Malformed CBOR input to verificationTool.mjs
-- A.9 structured embedding path — not yet tested in isolation
+- A.9 structured extraction compatibility path — implemented in
+  verification; root plain-text embedding uses A.8 for editor
+  survival testing
 - Certificate fetch failure — network unavailable scenario
 - Chain depth test — not applicable until multi-round
   provenance is implemented

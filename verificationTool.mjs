@@ -1,7 +1,13 @@
-import { extractManifest } from 'c2pa-text';
+import {
+  BEGIN_DELIMITER,
+  END_DELIMITER,
+  extractManifest,
+  extractStructured
+} from 'c2pa-text';
 import { createVerify, createHash } from 'crypto';
+import { readFile } from 'fs/promises';
+import { fileURLToPath } from 'url';
 import { decompress, decodeFromCBOR, canonicalBytes } from './compression.mjs';
-import { queryRegistry } from './registryClient.mjs';
 
 // ============================================================
 // evaluateDisclosureThreshold — pure function, no side effects
@@ -39,6 +45,25 @@ function isAllowedCertUrl(urlString) {
   return parsed.protocol === 'https:' && ALLOWED_CERT_HOSTS.includes(parsed.hostname);
 }
 
+function isAllowedLocalCertUrl(urlString) {
+  let parsed;
+  try {
+    parsed = new URL(urlString);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== 'file:') {
+    return false;
+  }
+
+  try {
+    return fileURLToPath(parsed) === `${process.cwd()}/cert.pem`;
+  } catch {
+    return false;
+  }
+}
+
 export function evaluateDisclosureThreshold({ signedLength, receivedLength }) {
   if (signedLength === undefined || signedLength === null) {
     return { disclose: false, reason: 'missing_text_length' };
@@ -50,21 +75,21 @@ export function evaluateDisclosureThreshold({ signedLength, receivedLength }) {
   return { disclose: withinThreshold, reason: withinThreshold ? 'within_threshold' : 'exceeds_threshold' };
 }
 
-export async function verifyManifest(embeddedText) {
+export async function verifyManifest(embeddedText, options = {}) {
 
   // STEP 1 — Extract manifest bytes from embedded text
-  let extracted;
-  try {
-    extracted = extractManifest(embeddedText);
-  } catch {
-    return {
-      status: 'degraded',
-      reason: 'Signal extraction failed — embedded data may be corrupted or absent',
-      anti_forensic_note: 'Absence of signal is itself forensic evidence of stripping or tampering'
-    };
-  }
+  const extracted = extractEmbeddedManifest(embeddedText);
 
   if (!extracted || !extracted.manifest) {
+    if (options.skipRegistry === true) {
+      return {
+        status: 'degraded',
+        reason: 'No embedded signal found in input text',
+        anti_forensic_note: 'Absence of signal is itself forensic evidence of stripping or tampering'
+      };
+    }
+
+    const { queryRegistry } = await import('./registryClient.mjs');
     const contentHash = createHash('sha256').update(embeddedText, 'utf8').digest('hex');
     const registryRecord = await queryRegistry({ contentHash });
 
@@ -105,14 +130,15 @@ export async function verifyManifest(embeddedText) {
   let signatureValid;
   let certificate;
   try {
-     if (!isAllowedCertUrl(signedManifest.cert_url)) {
+    const certSource = await loadCertificateForVerification(signedManifest.cert_url, options);
+    if (!certSource.allowed) {
       return {
         status: 'failed',
-        reason: 'Certificate URL not permitted — must be https and match an allowed host'
+        reason: certSource.reason
       };
     }
-    const response = await fetch(signedManifest.cert_url);
-    certificate = await response.text();
+
+    certificate = certSource.certificate;
 
     const fetchedFingerprint = createHash('sha256').update(certificate, 'utf8').digest('hex');
     if (fetchedFingerprint !== signedManifest.cert_fingerprint) {
@@ -141,9 +167,10 @@ export async function verifyManifest(embeddedText) {
   if (!signatureValid) {
     return {
       status: 'failed',
-      reason: 'Signature invalid — manifest was modified after signing',
+      reason: 'Signature invalid — manifest signature could not be verified with the advertised certificate',
       signed_at: signedManifest.signed_at ?? null,
-      algorithm: signedManifest.algorithm ?? null
+      algorithm: signedManifest.algorithm ?? null,
+      embedding_method_used: extracted.embeddingMethodUsed
     };
   }
 
@@ -168,7 +195,9 @@ export async function verifyManifest(embeddedText) {
         status: 'failed',
         reason: 'Manifest missing text_length field — cannot evaluate disclosure threshold. This manifest predates the text_length schema addition (D.6) and cannot be safely processed by this verification path.',
         signed_at: signedManifest.signed_at ?? null,
-        algorithm: signedManifest.algorithm ?? null
+        algorithm: signedManifest.algorithm ?? null,
+        embedding_method_used: extracted.embeddingMethodUsed,
+        disclosure_threshold_outcome: thresholdReason
       };
     }
 
@@ -177,7 +206,11 @@ export async function verifyManifest(embeddedText) {
         status: 'failed',
         reason: 'Visible text was modified after signing — content hash does not match. Original manifest withheld: received text length differs from signed text length beyond the disclosure threshold.',
         signed_at: signedManifest.signed_at ?? null,
-        algorithm: signedManifest.algorithm ?? null
+        algorithm: signedManifest.algorithm ?? null,
+        embedding_method_used: extracted.embeddingMethodUsed,
+        disclosure_threshold_outcome: thresholdReason,
+        signed_text_length: signedManifest.manifest.text_length,
+        received_text_length: extracted.cleanText.length
       };
     }
 
@@ -189,6 +222,10 @@ export async function verifyManifest(embeddedText) {
       reason: 'Visible text was modified after signing — content hash does not match',
       signed_at: signedManifest.signed_at ?? null,
       algorithm: signedManifest.algorithm ?? null,
+      embedding_method_used: extracted.embeddingMethodUsed,
+      disclosure_threshold_outcome: thresholdReason,
+      signed_text_length: signedManifest.manifest.text_length,
+      received_text_length: extracted.cleanText.length,
       original_manifest: {
         signed_at: signedManifest.signed_at ?? null,
         overall_ai_proportion: signedManifest.manifest.overall_ai_proportion ?? null,
@@ -211,6 +248,10 @@ export async function verifyManifest(embeddedText) {
     status: 'verified',
     signed_at: signedManifest.signed_at,
     algorithm: signedManifest.algorithm,
+    embedding_method_used: extracted.embeddingMethodUsed,
+    disclosure_threshold_outcome: 'not_applicable',
+    signed_text_length: signedManifest.manifest.text_length,
+    received_text_length: extracted.cleanText.length,
     overall_ai_proportion: signedManifest.manifest.overall_ai_proportion,
     human_proportion: signedManifest.manifest.human_proportion,
     segments: signedManifest.manifest.content_segments.map(segment => ({
@@ -222,6 +263,76 @@ export async function verifyManifest(embeddedText) {
       ai_tool: segment.ai_tool ?? null,
       modification_degree: segment.modification_degree ?? null
     }))
+  };
+}
+
+function extractEmbeddedManifest(embeddedText) {
+  try {
+    const extracted = extractManifest(embeddedText);
+    if (extracted?.manifest) {
+      return {
+        ...extracted,
+        embeddingMethodUsed: 'A.8'
+      };
+    }
+  } catch {
+    // Continue to structured extraction below.
+  }
+
+  try {
+    const extracted = extractStructured(embeddedText);
+    if (!extracted?.manifest) {
+      return null;
+    }
+
+    return {
+      manifest: extracted.manifest,
+      cleanText: removeStructuredManifestBlock(embeddedText),
+      embeddingMethodUsed: 'A.9'
+    };
+  } catch {
+    return null;
+  }
+}
+
+function removeStructuredManifestBlock(embeddedText) {
+  const beginIndex = embeddedText.indexOf(BEGIN_DELIMITER);
+  const endIndex = embeddedText.indexOf(END_DELIMITER);
+
+  if (beginIndex < 0 || endIndex < beginIndex) {
+    throw new Error('structured manifest block not found');
+  }
+
+  const lineStart = embeddedText.lastIndexOf('\n', beginIndex);
+  const removalStart = lineStart < 0 ? 0 : lineStart;
+  const blockEnd = endIndex + END_DELIMITER.length;
+  const lineEnd = embeddedText.indexOf('\n', blockEnd);
+  const removalEnd = lineEnd < 0 ? embeddedText.length : lineEnd;
+
+  return (embeddedText.slice(0, removalStart) + embeddedText.slice(removalEnd)).normalize('NFC');
+}
+
+async function loadCertificateForVerification(certUrl, options) {
+  if (isAllowedCertUrl(certUrl)) {
+    const response = await fetch(certUrl);
+    return {
+      allowed: true,
+      certificate: await response.text()
+    };
+  }
+
+  if (options.allowLocalCert === true && isAllowedLocalCertUrl(certUrl)) {
+    return {
+      allowed: true,
+      certificate: await readFile(new URL(certUrl), 'utf8')
+    };
+  }
+
+  return {
+    allowed: false,
+    reason: options.allowLocalCert === true
+      ? 'Certificate URL not permitted — must be an allowed HTTPS host or the local test cert.pem'
+      : 'Certificate URL not permitted — must be https and match an allowed host'
   };
 }
 
