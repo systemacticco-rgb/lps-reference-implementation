@@ -2,6 +2,58 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
+## 2026-07-07 — Trailing whitespace normalization and A.9 removal
+
+### Strip rule — OPEN-2 closed
+Applied /[\r\n ]+$/ to visible text before text_hash and text_length
+are computed in manifestGenerator.mjs (signing time), and to extracted
+clean text before the received hash is computed in verificationTool.mjs
+(verification time). Both sides apply identically.
+
+Empirical basis: editor survival matrix of 37 runs across 13 editors,
+July 7 2026. Trailing characters observed from automatic editor behavior:
+  U+000A — Google Docs copy-out
+  U+0020 — Word Browser copy-out
+  U+0020 + U+000A — LinkedIn post and Instagram compose (user-typed space)
+  U+0020 only — all other editors (user-typed space)
+No U+00A0, U+000D, or other character observed. \r included as
+zero-cost conservative addition for untested Windows Word.
+
+Files changed: manifestGenerator.mjs, verificationTool.mjs.
+No migration required — no existing signed manifest in the test
+environment had a trailing strippable character.
+
+### A.9 removal — OPEN-1 closed
+Removed A.9 structured extraction path from verificationTool.mjs.
+Removed: extractStructured import, BEGIN_DELIMITER, END_DELIMITER,
+second try block in extractEmbeddedManifest(), removeStructuredManifestBlock().
+A.8 is now the only extraction path.
+
+Rationale: the signing pipeline never produces A.9 output. Any document
+reaching the A.9 fallback was one where A.8 was stripped — evidence of
+tampering, not a legitimate alternate path. The fallback created a
+scenario where evidence of stripping produced a passing verification
+result. Removing it closes that gap.
+
+Files changed: verificationTool.mjs.
+
+### Trailing artifact instrumentation and verification log
+Added trailing_artifact field to buildSurvivalAnalysis() in
+lps-local-test-server.mjs. Records raw characters and Unicode code
+points of any text appended after signed_text_length in the extracted
+clean text. Appends each survival row as JSONL to verification-log.jsonl
+in the repository root after every /api/verify call. verification-log.jsonl
+added to .gitignore. README.md updated with local testing note.
+
+Files changed: lps-local-test-server.mjs, .gitignore, README.md.
+
+### clean_text exposure
+Added clean_text field to verified return (STEP 5) and both failed
+hash-mismatch returns (STEP 4) in verificationTool.mjs. Required for
+trailing_artifact computation in the local test rig.
+
+Files changed: verificationTool.mjs.
+
 ## 2026-07-06 — Local survival-analysis rig moved to root pipeline
 
 - Removed dependency on the stale `survival-test-tool` demo path. Local

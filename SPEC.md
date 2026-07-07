@@ -477,8 +477,12 @@ Steps in order:
 1. Extract manifest from content
 2. Check signature against public key
 3. Check certificate validity
-4. Hash extracted clean text, compare against text_hash in manifest.
-   If mismatch: return failed with reason.
+4. Strip trailing /[\r\n ]+$/ from extracted clean text, then hash
+   the stripped result and compare against text_hash in manifest.
+   The same strip is applied at signing time in manifestGenerator.mjs
+   before text_hash and text_length are computed. Both sides must
+   apply the strip identically or the hash comparison is meaningless.
+   If mismatch after strip: return failed with reason.
 5. Render contribution breakdown.
 
 Output — verified: signal intact, signature valid, text hash matches.
@@ -543,14 +547,17 @@ Output — injection_detected: valid chunks found from multiple
 [BUILT — v0.1] original_manifest disclosure in the failed state
 is gated by a length-mismatch threshold, locked at 10% of
 text_length. verificationTool.mjs STEP 4 computes the absolute
-difference between the received text's length and the manifest's
-text_length field; if that difference exceeds 10% of text_length,
-original_manifest is withheld and the failed response returns
-only status, reason, signed_at, and algorithm. This prevents an
-adversary from using extreme-mismatch replay to study document
+difference between the stripped received text's length and the
+manifest's text_length field; if that difference exceeds 10% of
+text_length, original_manifest is withheld and the failed response
+returns only status, reason, signed_at, and algorithm. This prevents
+an adversary from using extreme-mismatch replay to study document
 structure via repeated submissions. text_length is a plain
 manifest field, protected by the same signature that covers the
 whole manifest — it requires no separate HMAC or hash of its own.
+Note: text_length in the manifest reflects the stripped text length,
+not the raw input length. The strip is applied before text_length
+is computed in manifestGenerator.mjs.
 ---
 
 ## 6. Server-Side Record Store [PARTIALLY IMPLEMENTED]
@@ -725,7 +732,9 @@ Corrupted signal — returns degraded.
 
 ### Outstanding test gaps
 - Malformed CBOR input to verificationTool.mjs
-- A.9 structured extraction path — removed. A.8 is the only extraction path in verificationTool.mjs as of July 7 2026.
+- A.9 structured extraction path — removed. A.8 is the only
+  extraction path in verificationTool.mjs as of July 7 2026.
+  Closed OPEN-1.
 - Certificate fetch failure — network unavailable scenario
 - Chain depth test — not applicable until multi-round
   provenance is implemented
@@ -830,7 +839,23 @@ These must be resolved before building the signing layer:
       rendering, format conversion — without adversarial intent.
       Needs working group input before the flag can carry
       forensic weight.
-
+- [x] Trailing whitespace normalization before hashing — LOCKED
+      Strip rule: /[\r\n ]+$/ applied to visible text before
+      text_hash and text_length are computed at signing time
+      (manifestGenerator.mjs), and to extracted clean text before
+      the received hash is computed at verification time
+      (verificationTool.mjs). Both sides apply identically.
+      Empirically derived from editor survival matrix collected
+      July 7 2026 — 37 runs across 13 editors. Characters observed:
+        U+000A \n — Google Docs automatic copy-out behavior
+        U+0020 space — Word Browser automatic copy-out behavior
+        U+0020 + U+000A — LinkedIn post and Instagram compose
+          after user-typed trailing space
+        U+0020 only — all other editors, user-typed trailing space
+      No U+00A0 or U+000D observed. \r included as zero-cost
+      conservative addition for untested Windows Word.
+      Closes OPEN-2.
+      
 - [x] Canonical key generation command — LOCKED
       Private key must be generated using OpenSSL 3.x with
       the P-256 named curve. The generated key must use
