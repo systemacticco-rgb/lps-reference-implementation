@@ -725,9 +725,7 @@ Corrupted signal — returns degraded.
 
 ### Outstanding test gaps
 - Malformed CBOR input to verificationTool.mjs
-- A.9 structured extraction compatibility path — implemented in
-  verification; root plain-text embedding uses A.8 for editor
-  survival testing
+- A.9 structured extraction path — removed. A.8 is the only extraction path in verificationTool.mjs as of July 7 2026.
 - Certificate fetch failure — network unavailable scenario
 - Chain depth test — not applicable until multi-round
   provenance is implemented
