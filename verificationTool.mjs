@@ -175,7 +175,8 @@ export async function verifyManifest(embeddedText, options = {}) {
   // Hash the received text and compare against the hash stored
   // in the manifest at signing time. If they differ, the visible
   // text was changed after signing even though the manifest was not. 
-  const receivedHash = createHash('sha256').update(extracted.cleanText, 'utf8').digest('hex');
+  const strippedCleanText = extracted.cleanText.replace(/[\r\n ]+$/, '');
+  const receivedHash = createHash('sha256').update(strippedCleanText, 'utf8').digest('hex');
 
   if (receivedHash !== signedManifest.manifest.text_hash) {
     // Replay/transfer disclosure threshold (working-group-submission.md §5,
@@ -184,7 +185,7 @@ export async function verifyManifest(embeddedText, options = {}) {
     // unit-tested (see testVerification.mjs).
     const { disclose, reason: thresholdReason } = evaluateDisclosureThreshold({
       signedLength: signedManifest.manifest.text_length,
-      receivedLength: extracted.cleanText.length
+      receivedLength: strippedCleanText.length
     });
 
     if (thresholdReason === 'missing_text_length') {
@@ -205,10 +206,10 @@ export async function verifyManifest(embeddedText, options = {}) {
         signed_at: signedManifest.signed_at ?? null,
         algorithm: signedManifest.algorithm ?? null,
         embedding_method_used: extracted.embeddingMethodUsed,
-        clean_text: extracted.cleanText,
+        clean_text: strippedCleanText,
         disclosure_threshold_outcome: thresholdReason,
         signed_text_length: signedManifest.manifest.text_length,
-        received_text_length: extracted.cleanText.length
+        received_text_length: strippedCleanText.length
       };
     }
 
@@ -221,10 +222,10 @@ export async function verifyManifest(embeddedText, options = {}) {
       signed_at: signedManifest.signed_at ?? null,
       algorithm: signedManifest.algorithm ?? null,
       embedding_method_used: extracted.embeddingMethodUsed,
-      clean_text: extracted.cleanText,
+      clean_text: strippedCleanText,
       disclosure_threshold_outcome: thresholdReason,
       signed_text_length: signedManifest.manifest.text_length,
-      received_text_length: extracted.cleanText.length,
+      received_text_length: strippedCleanText.length,
       original_manifest: {
         signed_at: signedManifest.signed_at ?? null,
         overall_ai_proportion: signedManifest.manifest.overall_ai_proportion ?? null,
@@ -248,10 +249,10 @@ export async function verifyManifest(embeddedText, options = {}) {
     signed_at: signedManifest.signed_at,
     algorithm: signedManifest.algorithm,
     embedding_method_used: extracted.embeddingMethodUsed,
-    clean_text: extracted.cleanText,
+    clean_text: strippedCleanText,
     disclosure_threshold_outcome: 'not_applicable',
     signed_text_length: signedManifest.manifest.text_length,
-    received_text_length: extracted.cleanText.length,
+    received_text_length: strippedCleanText.length,
     overall_ai_proportion: signedManifest.manifest.overall_ai_proportion,
     human_proportion: signedManifest.manifest.human_proportion,
     segments: signedManifest.manifest.content_segments.map(segment => ({

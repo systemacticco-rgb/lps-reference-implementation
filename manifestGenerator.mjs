@@ -71,12 +71,13 @@ export function generateManifest({ visibleText, segments, signingTool, signedAt 
   const human_proportion = totalCharCount === 0 ? 0 : Math.round((humanCharCount / totalCharCount) * 100) / 100;
   // Math.round(x * 100) / 100 keeps proportions to two decimal places. 0.4, not 0.39999999...
 
-  const textHash = createHash('sha256').update(visibleText, 'utf8').digest('hex');
+const strippedText = visibleText.replace(/[\r\n ]+$/, '');
+  const textHash = createHash('sha256').update(strippedText, 'utf8').digest('hex');
 
   return {
     lps_version: "0.1",
     text_hash: textHash,
-    text_length: visibleText.length,
+    text_length: strippedText.length,
     content_segments,
     overall_ai_proportion,
     human_proportion,
