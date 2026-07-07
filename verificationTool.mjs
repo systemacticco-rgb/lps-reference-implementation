@@ -1,8 +1,5 @@
 import {
-  BEGIN_DELIMITER,
-  END_DELIMITER,
-  extractManifest,
-  extractStructured
+  extractManifest
 } from 'c2pa-text';
 import { createVerify, createHash } from 'crypto';
 import { readFile } from 'fs/promises';
@@ -208,6 +205,7 @@ export async function verifyManifest(embeddedText, options = {}) {
         signed_at: signedManifest.signed_at ?? null,
         algorithm: signedManifest.algorithm ?? null,
         embedding_method_used: extracted.embeddingMethodUsed,
+        clean_text: extracted.cleanText,
         disclosure_threshold_outcome: thresholdReason,
         signed_text_length: signedManifest.manifest.text_length,
         received_text_length: extracted.cleanText.length
@@ -223,6 +221,7 @@ export async function verifyManifest(embeddedText, options = {}) {
       signed_at: signedManifest.signed_at ?? null,
       algorithm: signedManifest.algorithm ?? null,
       embedding_method_used: extracted.embeddingMethodUsed,
+      clean_text: extracted.cleanText,
       disclosure_threshold_outcome: thresholdReason,
       signed_text_length: signedManifest.manifest.text_length,
       received_text_length: extracted.cleanText.length,
@@ -249,6 +248,7 @@ export async function verifyManifest(embeddedText, options = {}) {
     signed_at: signedManifest.signed_at,
     algorithm: signedManifest.algorithm,
     embedding_method_used: extracted.embeddingMethodUsed,
+    clean_text: extracted.cleanText,
     disclosure_threshold_outcome: 'not_applicable',
     signed_text_length: signedManifest.manifest.text_length,
     received_text_length: extracted.cleanText.length,
@@ -276,40 +276,9 @@ function extractEmbeddedManifest(embeddedText) {
       };
     }
   } catch {
-    // Continue to structured extraction below.
+    // extraction failed
   }
-
-  try {
-    const extracted = extractStructured(embeddedText);
-    if (!extracted?.manifest) {
-      return null;
-    }
-
-    return {
-      manifest: extracted.manifest,
-      cleanText: removeStructuredManifestBlock(embeddedText),
-      embeddingMethodUsed: 'A.9'
-    };
-  } catch {
-    return null;
-  }
-}
-
-function removeStructuredManifestBlock(embeddedText) {
-  const beginIndex = embeddedText.indexOf(BEGIN_DELIMITER);
-  const endIndex = embeddedText.indexOf(END_DELIMITER);
-
-  if (beginIndex < 0 || endIndex < beginIndex) {
-    throw new Error('structured manifest block not found');
-  }
-
-  const lineStart = embeddedText.lastIndexOf('\n', beginIndex);
-  const removalStart = lineStart < 0 ? 0 : lineStart;
-  const blockEnd = endIndex + END_DELIMITER.length;
-  const lineEnd = embeddedText.indexOf('\n', blockEnd);
-  const removalEnd = lineEnd < 0 ? embeddedText.length : lineEnd;
-
-  return (embeddedText.slice(0, removalStart) + embeddedText.slice(removalEnd)).normalize('NFC');
+  return null;
 }
 
 async function loadCertificateForVerification(certUrl, options) {

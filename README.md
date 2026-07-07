@@ -258,6 +258,11 @@ manual editor tests do not require internet certificate fetches or Supabase.
 Production verification remains stricter and should not inherit those local
 testing allowances.
 
+The test rig appends one JSONL entry to `verification-log.jsonl` in the
+repository root on every verification run. This file is gitignored and
+is not committed. It is the data source for the editor survival matrix.
+To share specific results, export rows manually.
+
 ---
 
 ## Git Remotes

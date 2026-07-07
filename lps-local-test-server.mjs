@@ -20,6 +20,7 @@
 // ============================================================
 
 import { createServer } from 'http';
+import { appendFileSync } from 'fs';
 import { generateManifest } from './manifestGenerator.mjs';
 import { embedManifestWithDiagnostics } from './embeddingLayer.mjs';
 import { verifyManifest } from './verificationTool.mjs';
@@ -59,9 +60,13 @@ const server = createServer(async (req, res) => {
       const { text, source, expected } = await readBody(req);
       if (typeof text !== 'string' || !text.length) return json(res, 400, { error: 'No text provided' });
       const result = await verifyManifest(text, { allowLocalCert: true, skipRegistry: true });
+      const survivalRow = buildSurvivalAnalysis({ result, text, source, expected });
+      try {
+        appendFileSync('verification-log.jsonl', JSON.stringify(survivalRow) + '\n');
+      } catch { /* non-fatal */ }
       return json(res, 200, {
         ...result,
-        survival_analysis: buildSurvivalAnalysis({ result, text, source, expected })
+        survival_analysis: survivalRow
       });
     } catch (e) {
       return json(res, 500, { error: 'verifyManifest threw', detail: String(e && e.message || e) });
@@ -152,7 +157,18 @@ function buildSurvivalAnalysis({ result, text, source = {}, expected = {} }) {
     pasted_text_length: text.length,
     signed_text_length: result?.signed_text_length ?? null,
     received_text_length: result?.received_text_length ?? null,
-    disclosure_threshold_outcome: result?.disclosure_threshold_outcome ?? null
+    disclosure_threshold_outcome: result?.disclosure_threshold_outcome ?? null,
+    trailing_artifact: (() => {
+      const clean = result?.clean_text ?? null;
+      const signedLen = result?.signed_text_length ?? null;
+      if (!clean || signedLen === null) return null;
+      const tail = clean.slice(signedLen);
+      if (!tail.length) return null;
+      return {
+        raw: tail,
+        char_codes: [...tail].map(c => c.codePointAt(0))
+      };
+    })()
   };
 }
 
