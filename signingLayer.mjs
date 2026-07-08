@@ -77,7 +77,7 @@ export function signManifest(manifest) {
     return {
       manifest,
       signature,
-      cert_url: 'file://' + process.cwd() + '/cert.pem',
+      cert_url: 'https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem',
       cert_fingerprint: certFingerprint,
       algorithm: 'es256',
       signed_at: new Date().toISOString()

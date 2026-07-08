@@ -54,7 +54,7 @@ const embeddedText = embedManifest(visibleText, signedManifest);
  */
 
 console.log('--- Verification result ---');
-const result = await verifyManifest(embeddedText, { allowLocalCert: true });
+const result = await verifyManifest(embeddedText);
 console.log(JSON.stringify(result, null, 2));
 
 const expectedSegments = [
