@@ -298,7 +298,10 @@ Certificate delivery — v0.1:
 cert.pem is not embedded in the manifest. It is hosted publicly at:
 https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem
 The manifest carries two fields instead:
-cert_url — the public URL of the certificate.
+cert_url — the public URL of the certificate. Locked to production
+HTTPS URL as of 2026-07-08. The file:// local path was a testing
+placeholder and was never appropriate as a permanent value.
+See CHANGELOG.md 2026-07-08 entry. [BUILT — 2026-07-08]
 cert_fingerprint — SHA-256 hash of the certificate content.
 The verification tool fetches the certificate, computes a SHA-256 hash of its DER-encoded bytes (X509Certificate.raw — not the PEM string), confirms it matches cert_fingerprint, then uses it to verify the signature. The signing layer computes cert_fingerprint the same way at sign time. Both sides must use DER bytes or the comparison is sensitive to PEM text encoding differences across platforms and network responses.
 Repo: systemacticco-rgb/lps-certificates (public)
@@ -884,6 +887,13 @@ v0.1-registry-stub — June 21 2026 — registry stub implemented.
   testRegistryVerification.mjs. Updated: verificationTool.mjs
   registry_required state wired. Supabase tables created:
   registry_records, usage_events. All six tests passing.— June 2026 — skeleton created
+
+v0.1-prod-cert — 2026-07-08 — cert_url locked to production HTTPS URL.
+  signingLayer.mjs updated. testVerification.mjs clean case no longer
+  requires allowLocalCert. All seven tests confirmed passing under
+  production cert_url. Appendix A in working-group-submission.md
+  replaced with live verified output from this run.
+
 v0.1-cose-fix — June 30 2026 — corrected ES256 signature encoding.
   signingLayer.mjs and verificationTool.mjs updated to use
   dsaEncoding: 'ieee-p1363' instead of Node's default DER
