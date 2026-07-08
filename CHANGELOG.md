@@ -2,6 +2,34 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
+## [2026-07-08] — Production cert_url and Appendix A live output
+
+### cert_url — production HTTPS URL locked (DEC-P.1)
+signingLayer.mjs: cert_url changed from file:// + process.cwd()
+placeholder to production HTTPS URL:
+https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem
+The file:// path was a local-testing artifact and was never appropriate
+as a permanent value. First full end-to-end pipeline verification under
+the production cert_url confirmed this session: raw.githubusercontent.com
+fetch succeeded, DER fingerprint matched, signature validated, text hash
+matched. All seven tests passing under production conditions.
+Files: signingLayer.mjs
+
+### testVerification.mjs — allowLocalCert removed from clean case (DEC-P.2)
+allowLocalCert removed from line 57 (J.3 clean verification case).
+Clean case now runs against the production cert_url with no local
+certificate override. Adversarial and small-edit cases retain
+allowLocalCert: true — their purpose is threshold and disclosure
+logic, not cert fetching.
+Files: testVerification.mjs
+
+### working-group-submission.md — Appendix A States 1–3 replaced with live output
+States 1, 2, and 3 in Appendix A replaced with live pipeline output
+from the 2026-07-08T02:38:14.081Z run. State 4 unchanged.
+This is the first Appendix A populated with real verified output
+under production conditions.
+Files: working-group-submission.md (public repo)
+
 ## [2026-07-08] — cert sync and DER fingerprint fix
 
 ### cert_fingerprint — DER bytes replacing PEM-string hash
