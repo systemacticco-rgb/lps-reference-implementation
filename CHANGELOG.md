@@ -2,6 +2,38 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
+## [2026-07-08] — cert sync and DER fingerprint fix
+
+### cert_fingerprint — DER bytes replacing PEM-string hash
+signingLayer.mjs line 75 and verificationTool.mjs line 140 were
+computing cert_fingerprint by hashing the PEM string (certificate
+text including headers and line breaks). Replaced with
+X509Certificate.raw (DER bytes) on both sides. DER is the binary
+certificate content with no text wrapper — identical certificate
+content always produces identical DER bytes regardless of how the
+PEM file is encoded, stored, or served. PEM-string hashing was
+sensitive to line-ending differences between local disk reads and
+GitHub fetch responses, which would produce a fingerprint mismatch
+on any cert rotation where file encoding varied.
+X509Certificate added to crypto import in verificationTool.mjs.
+Already present in signingLayer.mjs — no import change needed.
+Breaking: manifests signed before this commit carry a cert_fingerprint
+computed from PEM-string hashing and will not verify against this
+code. No migration required — no distributed signed documents exist
+at v0.1.
+Files: signingLayer.mjs, verificationTool.mjs
+
+### lps-certificates repo — stale cert replaced
+lps-certificates on GitHub was holding the cert generated Jul 6
+05:48:49 UTC. Local cert.pem had been rotated to the 22:55:25 UTC
+version during the genpkey key rotation documented in the Jul 6
+CHANGELOG entry, but was never pushed to lps-certificates. All
+verification attempts against the production cert_url were failing
+at the fingerprint check — the fetched cert and the signing cert
+were two different certificates with no key relationship. Fixed by
+pushing the current local cert.pem to lps-certificates.
+No code changes. No schema changes. No test changes.
+
 ## 2026-07-07 — Trailing whitespace normalization and A.9 removal
 
 ### Strip rule — OPEN-2 closed

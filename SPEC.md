@@ -300,8 +300,7 @@ https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.p
 The manifest carries two fields instead:
 cert_url — the public URL of the certificate.
 cert_fingerprint — SHA-256 hash of the certificate content.
-The verification tool fetches the certificate, hashes it, confirms it
-matches cert_fingerprint, then uses it to verify the signature.
+The verification tool fetches the certificate, computes a SHA-256 hash of its DER-encoded bytes (X509Certificate.raw — not the PEM string), confirms it matches cert_fingerprint, then uses it to verify the signature. The signing layer computes cert_fingerprint the same way at sign time. Both sides must use DER bytes or the comparison is sensitive to PEM text encoding differences across platforms and network responses.
 Repo: systemacticco-rgb/lps-certificates (public)
 
 Constraints:
@@ -855,7 +854,7 @@ These must be resolved before building the signing layer:
       No U+00A0 or U+000D observed. \r included as zero-cost
       conservative addition for untested Windows Word.
       Closes OPEN-2.
-      
+
 - [x] Canonical key generation command — LOCKED
       Private key must be generated using OpenSSL 3.x with
       the P-256 named curve. The generated key must use
