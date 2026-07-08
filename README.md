@@ -207,6 +207,12 @@ node testConfidenceFallback.mjs
 All seven tests passing as of July 6, 2026. If any test fails after a change,
 do not commit. Resolve the failure first.
 
+[2026-07-08] cert_url in signingLayer.mjs changed from file://
+placeholder to production HTTPS URL. First full end-to-end pipeline
+verification under production cert confirmed passing. testVerification.mjs
+clean case (J.3) no longer requires allowLocalCert. All seven tests
+passing under production conditions.
+
 [2026-07-04 7:31pm] The two D.6 text_length threshold cases below were not
 ordinary coverage gaps. Their absence was hiding a live defect: the
 disclose-branch in verificationTool.mjs's STEP 4 contained a dead duplicate
