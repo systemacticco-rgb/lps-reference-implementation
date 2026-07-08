@@ -72,7 +72,7 @@ export function signManifest(manifest) {
       'base64'
     );
 
-    const certFingerprint = createHash('sha256').update(certificate, 'utf8').digest('hex');
+    const certFingerprint = createHash('sha256').update(new X509Certificate(certificate).raw).digest('hex');
 
     return {
       manifest,

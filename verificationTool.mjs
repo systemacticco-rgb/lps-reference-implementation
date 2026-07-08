@@ -1,7 +1,7 @@
 import {
   extractManifest
 } from 'c2pa-text';
-import { createVerify, createHash } from 'crypto';
+import { createVerify, createHash, X509Certificate } from 'crypto';
 import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { decompress, decodeFromCBOR, canonicalBytes } from './compression.mjs';
@@ -137,7 +137,7 @@ export async function verifyManifest(embeddedText, options = {}) {
 
     certificate = certSource.certificate;
 
-    const fetchedFingerprint = createHash('sha256').update(certificate, 'utf8').digest('hex');
+    const fetchedFingerprint = createHash('sha256').update(new X509Certificate(certificate).raw).digest('hex');
     if (fetchedFingerprint !== signedManifest.cert_fingerprint) {
       return {
         status: 'failed',
