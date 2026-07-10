@@ -303,6 +303,34 @@ and fenced code blocks only.
 
 ---
 
+#### Token overhead in language model integrations
+
+Text carrying LPS-embedded manifests incurs increased token
+consumption when passed to any language model API. Unicode variation
+selectors used by the A.8 carrier are not collapsed by tokenizers —
+each invisible character consumes token budget independently.
+Production manifests in the safe operating range (3–10 segments,
+400–1,500 bytes compressed) produce invisible character counts below
+approximately 3,000 variation selectors. At this size the token
+overhead is measurable but not prohibitive. Manifests above this
+range — stress-test profiles only, not typical production use —
+produce proportionally higher overhead.
+
+Two adoption scenarios both carry this constraint. If LPS is adopted
+at generation time — the AI provider embeds a manifest at the moment
+content is produced — the embedded text returned to the caller
+already carries the invisible payload, and any downstream API call
+passing that text to another model will consume additional tokens. If
+LPS is adopted via API retrieval — a third party fetches or receives
+LPS-embedded text and passes it to a model — the same overhead
+applies at that call boundary. In either case, integrations must
+account for this overhead in token budget planning.
+
+Strip the manifest before passing text to contexts where token cost
+is the primary constraint and provenance is not required at that step.
+
+--- 
+
 ## Git Remotes
 
 This repository has three remotes. All three must receive every push:
