@@ -2,6 +2,28 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
+## [2026-07-08 9:32pm] — OPEN-1 closed: 10kb survival confirmed
+
+Survival testing at 5kb and 10kb manifest sizes confirmed the A.8
+carrier survives copy-paste at both sizes across all editors tested
+in the July 2026 survival study. Verification succeeds at all tested
+sizes. Latency appears above approximately 6,000 variation selectors
+in rich-text editors that process character-level clipboard payloads —
+Apple Notes on macOS is the confirmed case at 5kb and above — but
+latency is not carrier corruption. OPEN-1 closed. The 10kb profile
+is a stress-test scenario, not a production operating range.
+
+## [2026-07-08 7:45pm] — OPEN-2 strip rule coverage gap noted
+
+The 2026-07-07 trailing whitespace strip rule was derived from
+37 runs across 13 editors, all on macOS. Windows Word was not
+tested — \r was included as a zero-cost conservative addition
+for that case. The strip rule is locked and the implementation
+is correct. The empirical basis is macOS-only. A Windows round
+is required before the rule can be considered fully validated
+across platforms. OPEN-2 closed. Windows coverage gap tracked
+as a remaining validation item.
+
 ## [2026-07-08] — Production cert_url and Appendix A live output
 
 ### cert_url — production HTTPS URL locked (DEC-P.1)
@@ -125,6 +147,10 @@ Files changed: verificationTool.mjs.
   structured extraction remains supported by the verifier for compatibility,
   but the local copy path no longer falls back to a visible ASCII-armour
   comment block.
+  Superseded by 2026-07-07: A.9 extraction path removed entirely
+  from verificationTool.mjs. A.8 is now the only extraction path.
+  The compatibility statement above no longer reflects current
+  behavior. See 2026-07-07 entry.
 - Superseded the earlier 220-byte A.8 fallback threshold assumption. With the
   current `c2pa-text` wrapper implementation, larger manifests create longer
   invisible selector payloads rather than requiring visible A.9 fallback.

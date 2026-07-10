@@ -76,15 +76,7 @@ The v0.1 baseline assumes:
   implementation is the sole verifier of its own signatures. It stops
   being sufficient once dependencies are upgraded and independent
   parties need to verify manifests signed under a prior version.
-  PROPOSAL 005's cross-copy reconstruction path makes this a harder
-  problem, not just a relevant one: reconstruction requires re-deriving
-  canonical bytes from recovered fragments, and tagging the manifest
-  with a canonicalization-version field creates a circular trust
-  problem — the verifier cannot know which encoder to use without
-  first trusting the field that names it, and cannot trust that field
-  without already having verified it. No resolution is adopted yet.
-  This must be decided before PROPOSAL 005 ships, or before any
-  working-group feedback requires an answer sooner.
+  PROPOSAL 005's cross-copy reconstruction path makes this a harder problem, not just a relevant one: reconstruction requires re-deriving canonical bytes from recovered fragments, and tagging the manifest with a canonicalization-version field creates a circular trust problem — the verifier cannot know which encoder to use without first trusting the field that names it, and cannot trust that field without already having verified it. No resolution is adopted yet. This issue exists regardless of whether A.8R is ultimately adopted. It is fundamentally a canonicalization determinism problem, not an invisible-carrier problem. However, cross-copy reconstruction increases its importance because the verifier must reliably reconstruct the exact signed bytes before verification can succeed. No resolution is adopted yet.
 
 ## Invariants
 
@@ -125,7 +117,7 @@ The v0.1 reference implementation includes:
 
 The following are specified but not built:
 
-- PROPOSAL 005 anchor layer
+- PROPOSAL 005 proposed redundant embedding
 - redundant embedding
 - cross-copy reconstruction
 - future verification states such as anchor_only, partial_recovery, injection_detected, and reconstruction_corrupted

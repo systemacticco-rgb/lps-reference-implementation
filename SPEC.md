@@ -384,15 +384,9 @@ Remaining optimization target: cert_url shortcode registry — drops
 78-byte URL to 3-4 bytes. Reserved for v0.2.
 
 Structured A.9 compatibility path:
-Structured A.9 stores manifest bytes or references in a delimited
-`data:application/c2pa;base64,...` block using host comment
-syntax. It is visible plain text and is therefore not the default
-plain-text survival-test carrier.
+The current v0.1 plain-text carrier is A.8 invisible Unicode variation selectors. Any structured visible-text carrier is not part of the v0.1 pipeline and must not be treated as a fallback.
 
-Detection: verificationTool.mjs first tries A.8 extraction via
-extractManifest(), then tries A.9 structured extraction via
-extractStructured(). No flag is required in the manifest. The
-verification result reports embedding_method_used as A.8 or A.9.
+Detection: verificationTool.mjs uses A.8 extraction via extractManifest(). No structured visible-text fallback path is part of the v0.1 verifier. The verification result reports embedding_method_used as A.8.
 
 Redundant embedding — PROPOSAL 005 — post-v0.1
 One complete full manifest copy embedded per paragraph via A.8R,

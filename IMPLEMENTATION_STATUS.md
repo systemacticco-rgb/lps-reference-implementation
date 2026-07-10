@@ -12,8 +12,8 @@ The v0.1 reference implementation is built and testable. The core pipeline is co
 |---|---|---|
 | Manifest generation | Built | Produces the LPS manifest from segment input. |
 | Signing layer | Built | Uses Node.js built-in crypto with ES256 / P-256 / SHA-256 and IEEE P1363 raw r‖s encoding. SIGNING_ENABLED environment-variable killswitch enforced as the first statement in signManifest(), before any key access — confirmed working 2026-07-05. Local signing now also refuses to sign when `private.pem` and `cert.pem` are not a matching key pair. |
-| Embedding layer | Built | Uses `c2pa-text` A.8 invisible Unicode variation selectors for the root plain-text copy path. |
-| Verification tool | Built | Verifies signature, text hash, recovery states, and both A.8/A.9 extraction paths for v0.1 compatibility. |
+| Embedding layer | Built | Uses the current c2pa-text A.8 contiguous invisible Unicode variation-selector carrier. No distributed or redundant carrier is implemented. |
+| Verification tool | Built | Verifies signature, text hash, recovery states, and A.8 extraction only. A.9 structured extraction was removed from the v0.1 verifier. |
 | Registry stub | Built | Supabase-backed stub exists for token/content-hash lookup and logging. |
 | Confidence fallback | Built | Mathematical fallback implemented with confidence source tracking. |
 | Local survival test rig | Built | `lps-local-test-server.mjs` runs the root pipeline locally and records manual editor round-trip results. |
@@ -31,7 +31,7 @@ The v0.1 reference implementation is built and testable. The core pipeline is co
 
 | Area | Status | Notes |
 |---|---|---|
-| PROPOSAL 005 | Specified | Redundant embedding, anchor layer, and cross-copy reconstruction. Future carrier is A.8R / redundant invisible variation-selector chunks, not standard A.9. |
+| PROPOSAL 005 | Specified | Conceptual architecture only. A.8R is the current design direction replacing the removed A.9 fallback, but its carrier format, arbitrary-position embedding capability, reconstruction rules, and validation semantics remain under definition and are not implemented. |
 | Anchor manifests | Not built | Defined for future work only. |
 | Cross-copy reconstruction | Not built | Defined for future work only. |
 | anchor_only verification state | Not built | Future output state. |

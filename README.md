@@ -269,6 +269,38 @@ repository root on every verification run. This file is gitignored and
 is not committed. It is the data source for the editor survival matrix.
 To share specific results, export rows manually.
 
+### Production constraints and safe operating ranges
+
+Safe manifest size: production manifests with realistic segment counts
+(3–10 segments) land between 400 bytes and 1,500 bytes compressed.
+Invisible character counts at this size remain below approximately
+3,000 variation selectors. Editor copy-paste behavior at this size is
+clean across all editors tested in the July 2026 survival study.
+
+Editor latency threshold: invisible character counts above approximately
+6,000 variation selectors — corresponding to manifests above
+approximately 2,500–3,000 bytes — produce measurable copy-paste latency
+in rich-text editors that process character-level clipboard payloads.
+Apple Notes on macOS exhibits this behavior at 5kb manifest size and
+above. Latency is not carrier corruption — verification succeeds at all
+tested sizes.
+
+AI compose input reclassification: platforms including Claude and the
+OpenAI ecosystem may reclassify large invisible-character payloads as
+file uploads rather than plain text when pasted into compose inputs. The
+manifest survives reclassification but the workflow breaks. The
+reclassification threshold varies by platform and is not under LPS
+control. Measurement across all target platforms is an open item
+(OPEN-4).
+
+Token overhead: see the token overhead section above.
+
+Code block constraint: LPS manifests must not be embedded inside code
+syntax blocks. Code renderers display invisible Unicode characters as
+visible replacement icons or colored markers. GitHub preserves the
+manifest invisibly at the file level. The constraint applies to inline
+and fenced code blocks only.
+
 ---
 
 ## Git Remotes
@@ -277,8 +309,6 @@ This repository has three remotes. All three must receive every push:
 
 ```bash
 git push origin main
-git push evangelia main
-git push systemactic main
 ```
 
 Never push to one remote only. Never run `git remote -v` after a token update.
