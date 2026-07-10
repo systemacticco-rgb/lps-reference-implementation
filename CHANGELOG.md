@@ -2,7 +2,7 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
-## [2026-07-08 9:32pm] — OPEN-1 closed: 10kb survival confirmed
+## [2026-07-08 9:32pm] — 10kb survival confirmed
 
 Survival testing at 5kb and 10kb manifest sizes confirmed the A.8
 carrier survives copy-paste at both sizes across all editors tested
@@ -10,10 +10,10 @@ in the July 2026 survival study. Verification succeeds at all tested
 sizes. Latency appears above approximately 6,000 variation selectors
 in rich-text editors that process character-level clipboard payloads —
 Apple Notes on macOS is the confirmed case at 5kb and above — but
-latency is not carrier corruption. OPEN-1 closed. The 10kb profile
+latency is not carrier corruption. The 10kb profile
 is a stress-test scenario, not a production operating range.
 
-## [2026-07-08 7:45pm] — OPEN-2 strip rule coverage gap noted
+## [2026-07-08 7:45pm] — strip rule coverage gap noted
 
 The 2026-07-07 trailing whitespace strip rule was derived from
 37 runs across 13 editors, all on macOS. Windows Word was not
@@ -21,7 +21,7 @@ tested — \r was included as a zero-cost conservative addition
 for that case. The strip rule is locked and the implementation
 is correct. The empirical basis is macOS-only. A Windows round
 is required before the rule can be considered fully validated
-across platforms. OPEN-2 closed. Windows coverage gap tracked
+across platforms. Windows coverage gap tracked
 as a remaining validation item.
 
 ## [2026-07-08] — Production cert_url and Appendix A live output
@@ -86,7 +86,7 @@ No code changes. No schema changes. No test changes.
 
 ## 2026-07-07 — Trailing whitespace normalization and A.9 removal
 
-### Strip rule — OPEN-2 closed
+### Strip rule 
 Applied /[\r\n ]+$/ to visible text before text_hash and text_length
 are computed in manifestGenerator.mjs (signing time), and to extracted
 clean text before the received hash is computed in verificationTool.mjs
@@ -105,7 +105,7 @@ Files changed: manifestGenerator.mjs, verificationTool.mjs.
 No migration required — no existing signed manifest in the test
 environment had a trailing strippable character.
 
-### A.9 removal — OPEN-1 closed
+### A.9 removal 
 Removed A.9 structured extraction path from verificationTool.mjs.
 Removed: extractStructured import, BEGIN_DELIMITER, END_DELIMITER,
 second try block in extractEmbeddedManifest(), removeStructuredManifestBlock().
