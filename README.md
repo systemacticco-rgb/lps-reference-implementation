@@ -10,17 +10,9 @@
 
 ## What This Repository Is
 
-This is the private implementation repository for the Linguistic Provenance
-Schema (LPS). It contains the working reference implementation, the internal
-technical specification, architecture and security documentation, and the
-changelog. It is not the public-facing proposal. That lives in the public
-repository above.
+This is the private implementation repository for the Linguistic Provenance Schema (LPS). It contains the working reference implementation, the internal technical specification, architecture and security documentation, and the changelog. It is not the public-facing proposal. That lives in the public repository above.
 
-This repository is the build authority. If there is ever a conflict between
-what a document says and what the code does, the discrepancy is a bug to be
-resolved — not an invitation to follow whichever source is more convenient.
-SPEC.md is the agent-directive specification. README.md in the public repo
-is the schema authority. Code follows both.
+This repository is the build authority. If there is ever a conflict between what a document says and what the code does, the discrepancy is a bug to be resolved — not an invitation to follow whichever source is more convenient. SPEC.md is the agent-directive specification. README.md in the public repo is the schema authority. Code follows both.
 
 ---
 
@@ -84,7 +76,7 @@ truth. Conflicts between documents are bugs. The resolution order is:
 | What changed and when? | CHANGELOG.md |
 | How do the components connect as a system? | ARCHITECTURE.md |
 | What does the system look like visually? | DIAGRAMS.md |
-| What is proposed but not yet built? | PROPOSALS.md in the public repo |
+| What is proposed but not yet built? | PROPOSAL_005.md in this repository |
 
 Schema changes always happen in the public repo README.md first. SPEC.md
 and code follow. Never change the schema in code first.
@@ -94,48 +86,27 @@ and code follow. Never change the schema in code first.
 ## Document Summaries
 
 ### SPEC.md
-The internal build specification. Written in agent-directive voice — it tells
-build agents exactly how to implement each component. It is not sanitized for
-external review and must not be shared with the working group as-is. It covers
-input format, confidence source contract, manifest compression, signing
-constraints, embedding layer, verification outputs, registry validation,
-security globals, test requirements, and open questions. Every component
-section is labeled BUILT, DEFINED, PLANNED, or PLACEHOLDER. If a section
-is not explicitly marked BUILT, treat it as undefined.
+The internal build specification. Written in agent-directive voice — it tells build agents exactly how to implement each component. It is not sanitized for external review and must not be shared with the working group as-is. It covers input format, confidence source contract, manifest compression, signing constraints, embedding layer, verification outputs, registry validation, security globals, test requirements, and open questions. 
+Every component section is labeled BUILT, DEFINED, PLANNED,
+PLACEHOLDER, SECURITY-CRITICAL, PARTIALLY IMPLEMENTED, or
+Skeleton. If a section is not explicitly marked BUILT, treat
+it as undefined.
 
 ### ARCHITECTURE.md
-Describes how the four pipeline stages connect — manifest generation, signing,
-embedding, verification — and how the registry, certificate store, and
-compression layer fit within that flow. Read this before making any change
-that touches more than one file. It is the map that prevents coupling mistakes.
+Describes how the four pipeline stages connect — manifest generation, signing, embedding, verification — and how the registry, certificate store, and compression layer fit within that flow. Read this before making any change that touches more than one file. It is the map that prevents coupling mistakes.
 
 ### SECURITY_MODEL.md
-Defines the trust boundaries, key handling rules, threat model, and global
-security constraints that apply to every component without exception. Covers
-private key storage, HMAC comparison requirements, certificate delivery,
-input validation policy, and what each verification state means forensically.
-Read this before touching signingLayer.mjs, verificationTool.mjs, or
-registryClient.mjs. Security constraints in this document override convenience
+Defines the trust boundaries, key handling rules, threat model, and global security constraints that apply to every component without exception. Covers private key storage, HMAC comparison requirements, certificate delivery, input validation policy, and what each verification state means forensically. Read this before touching signingLayer.mjs, verificationTool.mjs, or registryClient.mjs. Security constraints in this document override convenience
 in every case.
 
 ### IMPLEMENTATION_STATUS.md
-The single source of truth for what is actually built and tested versus what
-is only specified or planned. Before claiming a feature exists, check here.
-Before telling the working group something is implemented, verify it here
-first. It is updated on every commit that changes build status.
+The single source of truth for what is actually built and tested versus what is only specified or planned. Before claiming a feature exists, check here. Before telling the working group something is implemented, verify it here first. It is updated on every commit that changes build status.
 
 ### DIAGRAMS.md
-Visual representations of the pipeline flow, verification state machine,
-compression structure, and embedding carrier model. Reference when explaining
-the system to a new collaborator or when debugging a component interaction
-that is hard to reason about from code alone.
+Visual representations of the pipeline flow, verification state machine, compression structure, and embedding carrier model. Reference when explaining the system to a new collaborator or when debugging a component interaction that is hard to reason about from code alone.
 
 ### CHANGELOG.md
-Versioned record of every material change to the implementation. Each entry
-records what changed, which files were affected, what the motivation was, and
-whether any migration was required. The ES256 encoding fix (June 30, 2026)
-and the D.1–D.7 discrepancy audit fixes (July 3, 2026) are documented here
-in full.
+Versioned record of every material change to the implementation. Each entry records what changed, which files were affected, what the motivation was, and whether any migration was required. The ES256 encoding fix (June 30, 2026) and the D.1–D.7 discrepancy audit fixes (July 3, 2026) are documented here in full.
 
 ---
 
@@ -271,35 +242,16 @@ To share specific results, export rows manually.
 
 ### Production constraints and safe operating ranges
 
-Safe manifest size: production manifests with realistic segment counts
-(3–10 segments) land between 400 bytes and 1,500 bytes compressed.
-Invisible character counts at this size remain below approximately
-3,000 variation selectors. Editor copy-paste behavior at this size is
-clean across all editors tested in the July 2026 survival study.
+Safe manifest size: production manifests with realistic segment counts (3–10 segments) land between 400 bytes and 1,500 bytes compressed. Invisible character counts at this size remain below approximately 3,000 variation selectors. Editor copy-paste behavior at this size is clean across all editors tested in the July 2026 survival study.
 
-Editor latency threshold: invisible character counts above approximately
-6,000 variation selectors — corresponding to manifests above
-approximately 2,500–3,000 bytes — produce measurable copy-paste latency
-in rich-text editors that process character-level clipboard payloads.
-Apple Notes on macOS exhibits this behavior at 5kb manifest size and
-above. Latency is not carrier corruption — verification succeeds at all
-tested sizes.
+Editor latency threshold: invisible character counts above approximately 6,000 variation selectors — corresponding to manifests above approximately 2,500–3,000 bytes — produce measurable copy-paste latency in rich-text editors that process character-level clipboard payloads. Apple Notes on macOS exhibits this behavior at 5kb manifest size and above. Latency is not carrier corruption — verification succeeds at all tested sizes.
 
-AI compose input reclassification: platforms including Claude and the
-OpenAI ecosystem may reclassify large invisible-character payloads as
-file uploads rather than plain text when pasted into compose inputs. The
-manifest survives reclassification but the workflow breaks. The
-reclassification threshold varies by platform and is not under LPS
-control. Measurement across all target platforms is an open item
-(OPEN-4).
+AI compose input reclassification: platforms including Claude and the OpenAI ecosystem may reclassify large invisible-character payloads as file uploads rather than plain text when pasted into compose inputs. The manifest survives reclassification but the workflow breaks. The reclassification threshold varies by platform and is not under LPS control. Measurement across all target platforms is an open item (OPEN-4).
 
-Token overhead: see the token overhead section above.
+Token overhead: see the Token overhead in language model
+integrations section below.
 
-Code block constraint: LPS manifests must not be embedded inside code
-syntax blocks. Code renderers display invisible Unicode characters as
-visible replacement icons or colored markers. GitHub preserves the
-manifest invisibly at the file level. The constraint applies to inline
-and fenced code blocks only.
+Code block constraint: LPS manifests must not be embedded inside code syntax blocks. Code renderers display invisible Unicode characters as visible replacement icons or colored markers. GitHub preserves the manifest invisibly at the file level. The constraint applies to inline and fenced code blocks only.
 
 ---
 
@@ -333,13 +285,11 @@ is the primary constraint and provenance is not required at that step.
 
 ## Git Remotes
 
-This repository has three remotes. All three must receive every push:
+This repository has one remote: origin.
 
 ```bash
 git push origin main
 ```
-
-Never push to one remote only. Never run `git remote -v` after a token update.
 
 ---
 
@@ -349,8 +299,6 @@ Never push to one remote only. Never run `git remote -v` after a token update.
   notes only, never distributed
 - `RESEARCH.md` — removed July 3 2026, content absorbed into CHANGELOG.md
   and IMPLEMENTATION_STATUS.md
-- `pending/` — removed July 3 2026
-- `study/` — removed July 3 2026
 - The public working-group submission document — lives in the public repo
 - The public README (schema authority) — lives in the public repo
 
@@ -385,9 +333,11 @@ information. Do not resolve them unilaterally:
   yet to base it on. Do not treat that number as settled. Decision on
   both threshold and window length deferred until real usage data
   exists. See SPEC.md §9.
-- **SPEC.md §3 anchor HMAC derivation line** — currently states
-  createSign('SHA256'), no HKDF. Flagged as stale. Not corrected until key
-  hierarchy is locked.
+- **SPEC.md §3 anchor HMAC derivation line** — updated to
+  specify HKDF-SHA256 via crypto.hkdfSync('sha256', ikm, salt,
+  info, 32). ikm, salt, and info remain undefined pending the
+  key hierarchy decision. Implementation held until that
+  decision locks.
 
 ---
 

@@ -6,12 +6,7 @@ This changelog records architectural, security, and documentation changes for th
 
 Survival testing at 5kb and 10kb manifest sizes confirmed the A.8
 carrier survives copy-paste at both sizes across all editors tested
-in the July 2026 survival study. Verification succeeds at all tested
-sizes. Latency appears above approximately 6,000 variation selectors
-in rich-text editors that process character-level clipboard payloads —
-Apple Notes on macOS is the confirmed case at 5kb and above — but
-latency is not carrier corruption. The 10kb profile
-is a stress-test scenario, not a production operating range.
+in the July 2026 survival study. Verification succeeds at all tested sizes after manual normalization is applied. Google Docs and Word Browser, which append trailing whitespace on copy-out, are recorded as failed in the raw Appendix C.1 transport matrix — the manual normalization step confirmed the manifest survived intact in both cases. Trailing whitespace normalization is not implemented in the v0.1 pipeline. The CHANGELOG entry and the Appendix C.1 table describe different measurement points in the same pipeline. Latency appears above approximately 6,000 variation selectors in rich-text editors that process character-level clipboard payloads — Apple Notes on macOS is the confirmed case at 5kb and above — but latency is not carrier corruption. The 10kb profile is a stress-test scenario, not a production operating range.
 
 ## [2026-07-08 7:45pm] — strip rule coverage gap noted
 
