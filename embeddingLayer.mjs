@@ -11,6 +11,7 @@ export function embedManifest(visibleText, signedManifest) {
   return embedManifestWithDiagnostics(visibleText, signedManifest).text;
 }
 
+
 export function embedManifestWithDiagnostics(visibleText, signedManifest) {
   try {
     // STEP 1 — Compress and encode the signed manifest
