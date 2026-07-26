@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LPS Proposal 007 — Invisible Operator Survival Matrix</title>
+  <style>
+    :root {
+      --bg: #1c1b1a;
+      --card: #242a33;
+      --type: #f2f0ec;
+      --dim: #9aa0a8;
+      --good: #4a8c5f;
+      --bad: #9c4646;
+      --warn: #9c7d3f;
+      --line: #3a3d45;
+      --accent: #33536a;
+      --label-bg: #1a1f26;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--type); font: 13px/1.5 ui-monospace, Menlo, monospace; padding: 24px; max-width: 1200px; margin: 0 auto; }
+    textarea, select { width: 100%; background: var(--label-bg); color: var(--type); border: 1px solid var(--line); border-radius: 4px; padding: 8px; font: 13px/1.45 ui-monospace, Menlo, monospace; resize: vertical; }
+    button { background: var(--accent); color: #fff; border: 0; border-radius: 4px; padding: 7px 14px; font-size: 13px; cursor: pointer; margin-top: 8px; transition: transform 120ms ease, filter 120ms ease; }
+    button:hover { filter: brightness(1.12); }
+    button:active { transform: translateY(1px) scale(0.98); filter: brightness(1.18); }
+    button.is-pressed { animation: button-press 180ms ease; }
+    label, .field-label { display: block; font-size: 11px; color: var(--dim); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .cell { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 8px; }
+    .cell-header, .cell-footer { font-size: 10px; color: var(--dim); margin-bottom: 4px; }
+    .cell-footer { margin-top: 4px; margin-bottom: 0; }
+    .warn-note { color: var(--warn); }
+    .row-label { font-size: 10px; color: var(--dim); padding: 4px 0; white-space: nowrap; }
+    .section-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+    .inj-label { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 0 8px; }
+    .tier-sticky { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 8px 0; border-bottom: 1px solid var(--line); margin-bottom: 16px; font-size: 12px; color: var(--type); letter-spacing: 0.04em; }
+    .matrix-row { display: contents; }
+    .matrix-grid { display: grid; grid-template-columns: 120px repeat(3, 1fr); gap: 8px; align-items: start; margin-bottom: 8px; }
+    .matrix-grid .row-label { grid-column: 1; padding-top: 12px; }
+    #util-result { margin-top: 12px; font-size: 13px; line-height: 1.6; min-height: 20px; }
+    #utility { border-top: 1px solid var(--line); margin-top: 32px; padding-top: 24px; }
+    .utility-columns { display: flex; gap: 24px; }
+    .utility-column { flex: 1; min-width: 0; }
+    .utility-title { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; }
+    .utility-help { color: var(--dim); font-size: 11px; line-height: 1.45; margin-top: 6px; }
+    .utility-feedback { min-height: 20px; margin-top: 8px; font-size: 12px; opacity: 0; pointer-events: none; transform: translateY(-2px); transition: opacity 180ms ease, transform 180ms ease; }
+    .utility-feedback.is-visible { opacity: 1; transform: translateY(0); }
+    .matrix-text { user-select: text; }
+    .verification-section-label { font-size: 10px; letter-spacing: 0.08em; margin-bottom: 4px; text-transform: uppercase; }
+    .verification-log, .verification-errors { display: grid; gap: 2px; margin-bottom: 12px; }
+    .verification-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+    .verification-metric { border: 1px solid var(--line); border-radius: 4px; display: grid; gap: 4px; min-height: 62px; padding: 8px; }
+    .metric-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .metric-value { font-size: 16px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+    #page-title { color: var(--type); font: 17px/1.5 ui-monospace, Menlo, monospace; margin-bottom: 16px; }
+
+    @keyframes button-press {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(1px) scale(0.98); }
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 16px; }
+      .matrix-grid { grid-template-columns: 100px repeat(3, minmax(150px, 1fr)); overflow-x: auto; }
+      .utility-columns { flex-direction: column; }
+      .verification-metrics { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header id="page-title">LPS Proposal 007 — Invisible Operator Survival Matrix</header>
+  <main id="matrix" aria-label="Invisible operator survival test matrix"></main>
+
+  <section id="utility" aria-label="Embed and verify utility">
+    <div class="utility-title">UTILITY — Embed and Verify</div>
+    <div class="utility-columns">
+      <div class="utility-column">
+        <label for="util-input">Input text</label>
+        <textarea id="util-input" rows="3"></textarea>
+
+        <label for="util-header-total">Document header total</label>
+        <select id="util-header-total"></select>
+
+        <label for="util-span-count">AI spans</label>
+        <select id="util-span-count">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+        </select>
+
+        <button id="util-embed-btn" type="button">Embed</button>
+
+        <label for="util-mode">Embedding mode</label>
+        <select id="util-mode">
+          <option>Malformed sequence</option>
+          <option>Reordered fields</option>
+          <option>Duplicate header</option>
+          <option>Orphaned open</option>
+          <option>Orphaned close</option>
+          <option>Trailing normalization</option>
+          <option>Internal codepoints</option>
+        </select>
+        <div id="util-mode-help" class="utility-help">Creates the selected malformed marker pattern in Embedded result for paste-and-verify testing.</div>
+        <button id="util-mode-btn" type="button" aria-describedby="util-mode-help">Generate pathological input</button>
+
+        <label for="util-output">Embedded result — select all and Command+C, or use Copy button</label>
+        <textarea id="util-output" rows="3" readonly></textarea>
+        <button id="util-copy-btn" type="button">Copy embedded text</button>
+        <div id="util-feedback" class="utility-feedback" aria-live="polite" aria-atomic="true"></div>
+      </div>
+
+      <div class="utility-column">
+        <label for="util-verify-input">Paste back here</label>
+        <textarea id="util-verify-input" rows="3"></textarea>
+        <button id="util-verify-btn" type="button">Verify</button>
+        <div id="util-result" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const STRUCTURAL = String.fromCodePoint(0x2060);
+      const AI_TYPE = String.fromCodePoint(0x2061);
+      const OPEN_DIRECTION = String.fromCodePoint(0x2062);
+      const CLOSE_DIRECTION = String.fromCodePoint(0x2063);
+      const HEADER_TYPE = String.fromCodePoint(0x2064);
+      const OPEN_MARKER = STRUCTURAL + AI_TYPE + OPEN_DIRECTION;
+      const CLOSE_MARKER = STRUCTURAL + AI_TYPE + CLOSE_DIRECTION;
+      const APPROVED_MIN = 0x2060;
+      const APPROVED_MAX = 0x2064;
+      const ERROR_MESSAGES = {
+        E001: 'TRUNCATED_MARKER',
+        E002: 'INVALID_TYPE',
+        E003: 'INVALID_DIRECTION',
+        E004: 'INVALID_HEADER_DIGIT',
+        E005: 'HEADER_OUT_OF_RANGE',
+        E006: 'DUPLICATE_HEADER',
+        E007: 'ORPHANED_OPEN',
+        E008: 'ORPHANED_CLOSE',
+        E009: 'INTERNAL_SIGNAL',
+        E010: 'IMPOSSIBLE_COUNT',
+        E011: 'NO_VALID_MARKDOWN_FOUND'
+      };
+      const codepoints = [
+        { hex: '2060', name: 'WORD JOINER' },
+        { hex: '2061', name: 'FUNCTION APPLICATION' },
+        { hex: '2062', name: 'INVISIBLE TIMES' },
+        { hex: '2063', name: 'INVISIBLE SEPARATOR' },
+        { hex: '2064', name: 'INVISIBLE PLUS' }
+      ];
+      const fonts = [
+        { name: 'Georgia', family: 'Georgia, serif' },
+        { name: 'system-ui', family: 'system-ui, -apple-system, sans-serif' },
+        { name: 'Menlo', family: 'ui-monospace, Menlo, monospace' }
+      ];
+      const sizes = [18];
+      const injections = [
+        { id: '1', label: 'JS textContent', note: 'JS textContent — load-time assignment' },
+        { id: '2', label: 'HTML entity', note: 'HTML entity — browser parser path' },
+        { id: '3', label: 'JS insertAdjacentText', note: 'insertAdjacentText — post-render DOM path' }
+      ];
+      const matrix = document.getElementById('matrix');
+
+      function makeHeader(total) {
+        const digits = [
+          Math.floor(total / 25),
+          Math.floor(total / 5) % 5,
+          total % 5
+        ];
+        return STRUCTURAL + HEADER_TYPE +
+          digits.map(digit => String.fromCodePoint(APPROVED_MIN + digit)).join('');
+      }
+
+      function markerEntities(marker) {
+        return [...marker]
+          .map(character => `&#x${character.codePointAt(0).toString(16)};`)
+          .join('');
+      }
+
+      function makeCard(font, size, text, injection, kind, language = 'English') {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.cardKind = kind;
+        cell.dataset.language = language;
+
+        const cellHeader = document.createElement('div');
+        cellHeader.className = 'cell-header';
+        cellHeader.textContent = 'VERIFICATION TOOL 007';
+
+        const paragraph = document.createElement('p');
+        paragraph.className = 'matrix-text';
+        paragraph.dir = 'auto';
+        paragraph.lang = language === 'Arabic'
+          ? 'ar'
+          : language === 'Hebrew'
+            ? 'he'
+            : language === 'Persian'
+              ? 'fa'
+              : 'en';
+        paragraph.dataset.language = language;
+        paragraph.dataset.font = font.name;
+        paragraph.dataset.injectionType = injection.label;
+        paragraph.dataset.cardKind = kind;
+        paragraph.style.fontFamily = font.family;
+        paragraph.style.fontSize = `${size}px`;
+        paragraph.style.lineHeight = '1.6';
+        paragraph.style.color = 'var(--type)';
+        paragraph.style.margin = '0';
+        paragraph.style.padding = '8px';
+        paragraph.style.background = 'var(--card)';
+        paragraph.style.border = '1px solid var(--line)';
+        paragraph.style.borderRadius = '4px';
+        paragraph.style.userSelect = 'text';
+
+        const header = makeHeader(1);
+        if (injection.id === '1') {
+          paragraph.dataset.inj = '1';
+          paragraph.dataset.text = text;
+          paragraph.textContent = 'Loading test string…';
+        } else if (injection.id === '2') {
+          paragraph.innerHTML =
+            markerEntities(header + OPEN_MARKER) +
+            text +
+            markerEntities(CLOSE_MARKER);
+        } else {
+          paragraph.dataset.inj = '3';
+          paragraph.dataset.text = text;
+          paragraph.textContent = text;
+        }
+
+        const cellFooter = document.createElement('div');
+        cellFooter.className = 'cell-footer';
+        cellFooter.textContent = injection.label;
+        const injectionNote = document.createElement('div');
+        injectionNote.className = 'cell-footer warn-note';
+        injectionNote.textContent = injection.note;
+        cell.append(cellHeader, paragraph, cellFooter, injectionNote);
+        return cell;
+      }
+
+      for (const size of sizes) {
+        const tier = document.createElement('section');
+        const tierLabel = document.createElement('h2');
+        tierLabel.className = 'tier-sticky';
+        tierLabel.textContent = `SIZE TIER — ${size}px`;
+        tier.append(tierLabel);
+
+        for (const injection of injections) {
+          const subsection = document.createElement('div');
+          const injectionLabel = document.createElement('h3');
+          injectionLabel.className = 'inj-label';
+          injectionLabel.textContent = `INJECTION — ${injection.label}`;
+          subsection.append(injectionLabel);
+
+          const grid = document.createElement('div');
+          grid.className = 'matrix-grid';
+
+          for (const codepoint of codepoints.slice(0, 1)) {
+            const rowLabel = document.createElement('div');
+            rowLabel.className = 'row-label';
+            rowLabel.textContent = `U+${codepoint.hex} ${codepoint.name}`;
+            grid.append(rowLabel);
+
+            for (const font of fonts) {
+              const text = `${font.name}, ${size}px, U+${codepoint.hex} ${codepoint.name}, ${injection.label}.`;
+              grid.append(makeCard(font, size, text, injection, 'base'));
+            }
+          }
+
+          subsection.append(grid);
+          tier.append(subsection);
+        }
+
+        matrix.append(tier);
+      }
+
+      const bidiSamples = [
+        { language: 'Arabic', text: 'هذا نص عربي لاختبار بقاء الإشارات غير المرئية.' },
+        { language: 'Hebrew', text: 'זהו טקסט עברי לבדיקת הישרדות הסמנים הבלתי נראים.' },
+        { language: 'Persian', text: 'این متن فارسی برای آزمایش ماندگاری نشانگرهای نامرئی است.' }
+      ];
+      const bidiSection = document.createElement('section');
+      const bidiLabel = document.createElement('h2');
+      bidiLabel.className = 'tier-sticky';
+      bidiLabel.textContent = 'BIDI — 18px';
+      bidiSection.append(bidiLabel);
+      const bidiGrid = document.createElement('div');
+      bidiGrid.className = 'matrix-grid';
+      bidiSamples.forEach(sample => {
+        const rowLabel = document.createElement('div');
+        rowLabel.className = 'row-label';
+        rowLabel.textContent = sample.language;
+        bidiGrid.append(rowLabel);
+        injections.forEach((injection, index) => {
+          bidiGrid.append(makeCard(
+            fonts[index],
+            18,
+            `${sample.text} ${injection.label}.`,
+            injection,
+            'bidi',
+            sample.language
+          ));
+        });
+      });
+      bidiSection.append(bidiGrid);
+      matrix.append(bidiSection);
+
+      const INJ1_BLOCKS = document.querySelectorAll('[data-inj="1"]');
+      INJ1_BLOCKS.forEach(el => {
+        el.textContent = makeHeader(1) + OPEN_MARKER + el.dataset.text + CLOSE_MARKER;
+      });
+
+      function formatCodepoints(text) {
+        return [...text].map(character =>
+          `U+${character.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`
+        );
+      }
+
+      function trailingClipboardCodepoints(text) {
+        const values = [...text].map(character => character.codePointAt(0));
+        const trailing = [];
+        while (
+          values.length &&
+          (values[values.length - 1] === 0x0020 ||
+            values[values.length - 1] === 0x000a ||
+            values[values.length - 1] === 0x000d)
+        ) {
+          trailing.unshift(values.pop());
+        }
+        return trailing.map(value => `U+${value.toString(16).toUpperCase().padStart(4, '0')}`);
+      }
+
+      function matrixCardForNode(node) {
+        const element = node && node.nodeType === Node.ELEMENT_NODE
+          ? node
+          : node && node.parentElement;
+        return element && element.closest('.matrix-text');
+      }
+
+      function selectionDirection(selection) {
+        if (!selection || !selection.rangeCount || selection.isCollapsed) return 'collapsed';
+        try {
+          const probe = document.createRange();
+          probe.setStart(selection.anchorNode, selection.anchorOffset);
+          probe.setEnd(selection.focusNode, selection.focusOffset);
+          return probe.collapsed ? 'backward' : 'forward';
+        } catch {
+          return 'unknown';
+        }
+      }
+
+      function logMatrixInteraction(event, fallbackCard) {
+        const selection = window.getSelection();
+        const card = matrixCardForNode(selection && selection.anchorNode) ||
+          matrixCardForNode(selection && selection.focusNode) ||
+          fallbackCard;
+        if (!card) return;
+
+        const selectedText = selection ? selection.toString() : '';
+        console.info('Matrix text diagnostic', {
+          eventType: event.type,
+          selectionDirection: selectionDirection(selection),
+          anchorOffset: selection ? selection.anchorOffset : null,
+          focusOffset: selection ? selection.focusOffset : null,
+          selectedTextCodepoints: formatCodepoints(selectedText),
+          selectedTextLength: [...selectedText].length,
+          language: card.dataset.language,
+          font: card.dataset.font,
+          injectionType: card.dataset.injectionType
+        });
+      }
+
+      document.querySelectorAll('.matrix-text').forEach(card => {
+        ['selectstart', 'dragstart', 'dragend', 'copy', 'cut'].forEach(eventType => {
+          card.addEventListener(eventType, event => logMatrixInteraction(event, card));
+        });
+      });
+      document.addEventListener('selectionchange', event => logMatrixInteraction(event, null));
+
+      const headerTotal = document.getElementById('util-header-total');
+      const noHeaderOption = document.createElement('option');
+      noHeaderOption.value = '0';
+      noHeaderOption.textContent = 'No document header';
+      headerTotal.append(noHeaderOption);
+      for (let total = 1; total <= 99; total += 1) {
+        const option = document.createElement('option');
+        option.value = String(total);
+        option.textContent = String(total).padStart(2, '0');
+        if (total === 2) option.selected = true;
+        headerTotal.append(option);
+      }
+
+      function placementOrdinals(length) {
+        if (length > 200) return null;
+        if (length <= 10) return [0, 2, 4, length - 1];
+        if (length < 20) return [0, 6, 12, length - 1];
+        if (length < 50) return [0, 17, 27, length - 1];
+        if (length < 100) return [0, 23, 69, length - 1];
+        return [0, 41, 139, length - 1];
+      }
+
+      function embedDocument(text, total, spanCount) {
+        const inputCodepoints = [...text];
+        const visibleIndexes = [];
+        inputCodepoints.forEach((character, index) => {
+          const value = character.codePointAt(0);
+          if (value < APPROVED_MIN || value > APPROVED_MAX) {
+            visibleIndexes.push(index);
+          }
+        });
+        const ordinals = placementOrdinals(visibleIndexes.length);
+        if (!ordinals) return null;
+
+        const insertions = new Map();
+        function insertAtVisibleOrdinal(ordinal, marker) {
+          const codepointIndex = visibleIndexes[ordinal];
+          if (codepointIndex === undefined) return;
+          const existing = insertions.get(codepointIndex) || [];
+          existing.push(marker);
+          insertions.set(codepointIndex, existing);
+        }
+
+        if (spanCount === 1) {
+          insertAtVisibleOrdinal(ordinals[0], OPEN_MARKER);
+          insertAtVisibleOrdinal(ordinals[3], CLOSE_MARKER);
+        } else if (spanCount === 2) {
+          insertAtVisibleOrdinal(ordinals[0], OPEN_MARKER);
+          insertAtVisibleOrdinal(ordinals[1], CLOSE_MARKER);
+          insertAtVisibleOrdinal(ordinals[2], OPEN_MARKER);
+          insertAtVisibleOrdinal(ordinals[3], CLOSE_MARKER);
+        }
+
+        let embedded = total ? makeHeader(total) : '';
+        inputCodepoints.forEach((character, index) => {
+          if (insertions.has(index)) embedded += insertions.get(index).join('');
+          embedded += character;
+        });
+        return embedded;
+      }
+
+      function addError(errors, id, index) {
+        errors.push({ id, message: ERROR_MESSAGES[id], index });
+      }
+
+      function verifyDocument(input) {
+        const original = [...input].map(character => character.codePointAt(0));
+        const normalized = original.slice();
+        const leading = [];
+        const trailing = [];
+        if (normalized[0] === 0xfeff) {
+          leading.push(normalized.shift());
+        }
+        while (
+          normalized.length &&
+          (normalized[normalized.length - 1] === 0x0020 ||
+            normalized[normalized.length - 1] === 0x000a ||
+            normalized[normalized.length - 1] === 0x000d)
+        ) {
+          trailing.unshift(normalized.pop());
+        }
+
+        const errors = [];
+        const events = [];
+        let header = null;
+        let index = 0;
+        while (index < normalized.length) {
+          if (normalized[index] !== APPROVED_MIN) {
+            index += 1;
+            continue;
+          }
+
+          if (index + 1 >= normalized.length) {
+            index += 1;
+            continue;
+          }
+
+          const type = normalized[index + 1];
+          if (type === 0x2061) {
+            if (index + 2 >= normalized.length) {
+              addError(errors, 'E001', index);
+              index = normalized.length;
+              continue;
+            }
+            const direction = normalized[index + 2];
+            if (direction !== 0x2062 && direction !== 0x2063) {
+              addError(errors, 'E003', index);
+              index += 3;
+              continue;
+            }
+            events.push({
+              direction: direction === 0x2062 ? 'open' : 'close',
+              start: index,
+              end: index + 3
+            });
+            index += 3;
+            continue;
+          }
+
+          if (type === 0x2064) {
+            if (index + 4 >= normalized.length) {
+              addError(errors, 'E001', index);
+              index = normalized.length;
+              continue;
+            }
+            const encodedDigits = normalized.slice(index + 2, index + 5);
+            if (encodedDigits.some(value => value < APPROVED_MIN || value > APPROVED_MAX)) {
+              addError(errors, 'E004', index);
+              index += 5;
+              continue;
+            }
+            const digits = encodedDigits.map(value => value - APPROVED_MIN);
+            const decoded = digits[0] * 25 + digits[1] * 5 + digits[2];
+            if (decoded < 1 || decoded > 99) {
+              addError(errors, 'E005', index);
+              index += 5;
+              continue;
+            }
+            if (header) {
+              addError(errors, 'E006', index);
+            } else {
+              header = { total: decoded, index };
+            }
+            index += 5;
+            continue;
+          }
+
+          addError(errors, 'E002', index);
+          index += 1;
+        }
+
+        const pendingOpens = [];
+        const pairs = [];
+        events.forEach(event => {
+          if (event.direction === 'open') {
+            pendingOpens.push(event);
+          } else if (!pendingOpens.length) {
+            addError(errors, 'E008', event.start);
+          } else {
+            pairs.push({ open: pendingOpens.shift(), close: event });
+          }
+        });
+        pendingOpens.forEach(event => addError(errors, 'E007', event.start));
+
+        pairs.forEach(pair => {
+          const content = normalized.slice(pair.open.end, pair.close.start);
+          if (content.some(value => value >= APPROVED_MIN && value <= APPROVED_MAX)) {
+            addError(errors, 'E009', pair.open.start);
+          }
+        });
+
+        if (header && pairs.length > header.total) {
+          addError(errors, 'E010', header.index);
+        }
+        if (!header && !pairs.length) {
+          addError(errors, 'E011', 0);
+        }
+
+        return { normalized, leading, trailing, errors, header, pairs };
+      }
+
+      function hexList(values) {
+        return values.length
+          ? values.map(value => `U+${value.toString(16).toUpperCase().padStart(4, '0')}`).join(', ')
+          : 'none';
+      }
+
+      function appendVerificationSection(result, title, lines, className) {
+        const section = document.createElement('div');
+        section.className = className;
+        const label = document.createElement('div');
+        label.className = 'verification-section-label';
+        label.textContent = title;
+        section.append(label);
+        lines.forEach(line => {
+          const row = document.createElement('div');
+          row.textContent = line;
+          section.append(row);
+        });
+        result.append(section);
+      }
+
+      function appendVerificationMetric(metrics, label, value) {
+        const metric = document.createElement('div');
+        metric.className = 'verification-metric';
+        const metricLabel = document.createElement('div');
+        metricLabel.className = 'metric-label';
+        metricLabel.textContent = label;
+        const metricValue = document.createElement('div');
+        metricValue.className = 'metric-value';
+        metricValue.textContent = value;
+        metric.append(metricLabel, metricValue);
+        metrics.append(metric);
+      }
+
+      function renderVerification(verification) {
+        const result = document.getElementById('util-result');
+        result.replaceChildren();
+        appendVerificationSection(result, 'Normalized input log', [
+          `LEADING STRIP: count ${verification.leading.length}; hex ${hexList(verification.leading)}`, 
+          `TRAILING STRIP: count ${verification.trailing.length}; hex ${hexList(verification.trailing)}`,
+          `NORMALIZED CODEPOINT COUNT: ${verification.normalized.length}`
+        ], 'verification-log');
+
+        const metrics = document.createElement('div');
+        metrics.className = 'verification-metrics';
+        const headerTotal = verification.header ? String(verification.header.total) : 'Not present';
+        const spanTotal = String(verification.pairs.length);
+        const survivalRate = verification.header
+          ? `${(verification.pairs.length / verification.header.total * 100).toFixed(1)}% (${verification.pairs.length} / ${verification.header.total})`
+          : 'Not available';
+        appendVerificationMetric(metrics, 'Surviving pairs', String(verification.pairs.length));
+        appendVerificationMetric(metrics, 'Header total', headerTotal);
+        appendVerificationMetric(metrics, 'Span total', spanTotal);
+        appendVerificationMetric(metrics, 'Survival rate', survivalRate);
+        result.append(metrics);
+
+        if (verification.errors.length) {
+          appendVerificationSection(
+            result,
+            'Emitted errors',
+            verification.errors.map(error =>
+              `${error.id} ${error.message} — normalized index ${error.index}`
+            ),
+            'verification-errors'
+          );
+        }
+      }
+
+      const utilityFeedback = document.getElementById('util-feedback');
+      let feedbackTimer;
+      let feedbackClearTimer;
+
+      function pressButton(button) {
+        button.classList.remove('is-pressed');
+        void button.offsetWidth;
+        button.classList.add('is-pressed');
+        window.setTimeout(() => button.classList.remove('is-pressed'), 180);
+      }
+
+      function showUtilityFeedback(message) {
+        window.clearTimeout(feedbackTimer);
+        window.clearTimeout(feedbackClearTimer);
+        utilityFeedback.classList.remove('is-visible');
+        utilityFeedback.textContent = message;
+        void utilityFeedback.offsetWidth;
+        utilityFeedback.classList.add('is-visible');
+        feedbackTimer = window.setTimeout(() => {
+          utilityFeedback.classList.remove('is-visible');
+          feedbackClearTimer = window.setTimeout(() => {
+            if (!utilityFeedback.classList.contains('is-visible')) {
+              utilityFeedback.textContent = '';
+            }
+          }, 180);
+        }, 3000);
+      }
+
+      function logPastedText(source, text) {
+        console.info('Pasted text diagnostic', {
+          source,
+          codepoints: formatCodepoints(text),
+          trailingWhitespaceCodepoints: trailingClipboardCodepoints(text),
+          length: [...text].length
+        });
+      }
+
+      const embedButton = document.getElementById('util-embed-btn');
+      embedButton.addEventListener('click', () => {
+        pressButton(embedButton);
+        const text = document.getElementById('util-input').value;
+        const total = Number(document.getElementById('util-header-total').value);
+        const spanCount = Number(document.getElementById('util-span-count').value);
+        const embedded = embedDocument(text, total, spanCount);
+        if (embedded === null) {
+          document.getElementById('util-output').value = '';
+          document.getElementById('util-result').textContent =
+            'Placement is undefined for inputs longer than 200 visible characters.';
+          return;
+        }
+        document.getElementById('util-output').value = embedded;
+        showUtilityFeedback('Text embedded');
+      });
+
+      const modeButton = document.getElementById('util-mode-btn');
+      modeButton.addEventListener('click', () => {
+        pressButton(modeButton);
+        const text = document.getElementById('util-input').value;
+        const content = text || 'AI span content';
+        const mode = document.getElementById('util-mode').value;
+        const valid = makeHeader(1) + OPEN_MARKER + content + CLOSE_MARKER;
+        const pathological = {
+          'Malformed sequence': makeHeader(1) + content + STRUCTURAL + AI_TYPE,
+          'Reordered fields': makeHeader(1) + STRUCTURAL + OPEN_DIRECTION + AI_TYPE + content,
+          'Duplicate header': makeHeader(1) + makeHeader(1) + OPEN_MARKER + content + CLOSE_MARKER,
+          'Orphaned open': makeHeader(1) + OPEN_MARKER + content,
+          'Orphaned close': makeHeader(1) + content + CLOSE_MARKER,
+          'Trailing normalization': valid + ' \n\r',
+          'Internal codepoints': makeHeader(1) + OPEN_MARKER + content + HEADER_TYPE + CLOSE_MARKER
+        };
+        document.getElementById('util-output').value = pathological[mode];
+        showUtilityFeedback('Pathological input generated');
+      });
+
+      const copyButton = document.getElementById('util-copy-btn');
+      copyButton.addEventListener('click', () => {
+        pressButton(copyButton);
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') return;
+        navigator.clipboard.writeText(document.getElementById('util-output').value)
+          .then(() => showUtilityFeedback('Embedded text copied'))
+          .catch(() => {});
+      });
+
+      document.getElementById('util-verify-input').addEventListener('paste', event => {
+        const pasted = (event.clipboardData || window.clipboardData).getData('text');
+        logPastedText('paste', pasted);
+      });
+
+      const verifyButton = document.getElementById('util-verify-btn');
+      verifyButton.addEventListener('click', () => {
+        pressButton(verifyButton);
+        const pasted = document.getElementById('util-verify-input').value;
+        logPastedText('verify', pasted);
+        renderVerification(verifyDocument(pasted));
+      });
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const INJ3_BLOCKS = document.querySelectorAll('[data-inj="3"]');
+      INJ3_BLOCKS.forEach(el => {
+        const structural = String.fromCodePoint(0x2060);
+        const aiType = String.fromCodePoint(0x2061);
+        const openDirection = String.fromCodePoint(0x2062);
+        const closeDirection = String.fromCodePoint(0x2063);
+        const headerType = String.fromCodePoint(0x2064);
+        const header = structural + headerType + structural + structural + aiType;
+        el.insertAdjacentText('afterbegin', header + structural + aiType + openDirection);
+        el.insertAdjacentText('beforeend', structural + aiType + closeDirection);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -32,7 +32,7 @@ This proposal does not replace LPS v0.1, the A.8 carrier, or the cryptographic m
 
 ## What This Proposal Does
 
-[HOLD] The marker grammar, paragraph-boundary grammar, human-span treatment, ordinal or header encoding, and calculation rules are not defined. The AI-only variant remains on hold: without valid paragraph boundaries, unmarked text cannot safely be treated as human-authored.
+[HOLD] The AI-only model is operative. Human span markers, per-span ordinal fields, and per-span total-count fields are removed. The document-level header carries the total AI-span count. Ordinal-level gap localization is not available under the header-only model.
 
 [SECURITY / LIMITATION] A scanner that recognises a complete published grammar can classify text as carrying a claimed cooperative signal. Invisible Unicode alone establishes neither AI origin nor malicious intent; a recognised grammar cannot authenticate an issuer, provider, or author.
 
@@ -44,50 +44,47 @@ This proposal does not replace LPS v0.1, the A.8 carrier, or the cryptographic m
 
 ### Codepoint Selection
 
-[PENDING CROSS-CHECK / SECURITY] The remaining candidate pool is U+2060–U+2064; it is not a cleared or safe pool. U+2060 is WORD JOINER, while U+2061–U+2064 are invisible mathematical operators, “U+2060–U+2064 invisible operator range” is not technically exact. The tag block U+E0000–U+E007F, U+200B–U+200D, directional controls, and Braille Blank are excluded from this research direction for documented stripping, rendering, or prompt-injection concerns.
+[PENDING CROSS-CHECK / SECURITY] The approved codepoint library is U+2060–U+2064: U+2060 is the structural identifier; U+2061 is the AI span type identifier; U+2062 and U+2063 are open and close directions; U+2064 is the header type discriminator and base-5 digit value 4. No codepoint outside this library is valid at a Proposal 007 grammar position. Invalid occurrences of U+2060–U+2064 are discarded and do not contribute to a calculation. The tag block U+E0000–U+E007F, U+200B–U+200D, U+2065–U+206F, BMP PUA, variation-selector supplement, and directional controls are excluded.
 
-[PENDING CROSS-CHECK] Renderer, IDE, sanitizer, browser, and transport behaviour for the candidate pool remains unconfirmed beyond the scoped test tool. Coexistence with an A.8 manifest is a candidate design assumption, not an interoperability or survival claim.
+[PENDING CROSS-CHECK] Renderer, IDE, sanitizer, browser, and transport behaviour for the approved library remains unconfirmed beyond the scoped test tool. Coexistence with an A.8 manifest is a candidate design assumption, not an interoperability or survival claim.
 
 ### Compound Marker Sequences
 
-A single codepoint marker can collide with legitimate invisible mathematical or formatting content. A compound sequence may provide more structural validation, but its collision and survival behaviour require testing.
-
-**[HOLD] Candidate grammar — not normative and requires working-group confirmation:**
+A single codepoint marker can collide with legitimate invisible mathematical or formatting content. The operative span grammar uses three-codepoint markers:
 
 ```
 Role order:      structural wrapper | type | direction
 AI span open:    U+2060 U+2061 U+2062
 AI span close:   U+2060 U+2061 U+2063
-Human spans:     [HOLD — AI-only variant and human-span forms are unresolved]
 ```
 
-[HOLD] These are research assignments only. The candidate grammar does not establish type semantics, human-marker forms, verifier behaviour, or interoperability.
+Human span markers are not part of the main grammar.
 
 ### Byte Cost
 
-[HOLD] Payload and latency calculations depend on the unselected grammar, span policy, and ordinal or header design. No production latency or operational-cost claim is established.
+Each AI span marker is 3 codepoints and 9 bytes; an open-close pair is 18 bytes. The document header is 5 codepoints and 15 bytes. At 99 pairs, the payload ceiling is 1,797 bytes.
 
 ### Ordinal Sequencing
 
-[HOLD] No ordinal sequencing scheme is selected. Header total-count markers are also on hold: their numeric encoding, header grammar, paragraph-boundary grammar, and collision behaviour remain open. Base-5 encoding is a research direction, not a selected design.
+[HOLD] Per-span ordinal and total-count fields are removed. The document-level header is `U+2060 U+2064 [D1] [D2] [D3]` and carries the total AI-span count. Its three base-5 digits encode values 01–99 using U+2060–U+2064. One valid header is recorded per document scan; the first is authoritative. Ordinal-level gap localization is not available under this design.
 
 ### Optional Variants
 
-[PROPOSED] The following are documentation-only variants of PROPOSAL 007. They are lower-cost alternatives to the main cooperative-marker direction; they are not separate systems.
+[PROPOSED] The following are documentation-only fallbacks. No variant is promoted by the current findings.
 
 #### Variant 007-A — AI spans only
 
-[HOLD] AI spans would receive markers and human proportion would be inferred from unmarked text within valid paragraph boundaries. Without a defined boundary grammar, unmarked text cannot safely be treated as human-authored.
+Documentation-only fallback. The operative grammar is AI-only and does not treat unmarked text as human-authored.
 
 #### Variant 007-B — One-codepoint span markers
 
-[RESEARCH / PENDING CROSS-CHECK] One codepoint per span boundary could reduce payload length and sequence-based signalling, while increasing collision risk with legitimate invisible mathematical or formatting content and providing less structural validation. No one-codepoint marker is selected.
+Documentation-only fallback. No one-codepoint marker is selected for the operative grammar.
 
 [SECURITY / LIMITATION] A provider-adopted one-codepoint variant would still be forgeable; malicious actors could inject codepoints inside otherwise valid spans.
 
 #### Variant 007-C — Header total-count markers
 
-[HOLD] A document or paragraph header could carry a generation-time total while individual span markers carry no ordinal. It could support a completeness calculation only if the header survives and the encoding, boundary grammar, and collision behaviour are defined.
+Documentation-only fallback. The operative grammar includes a document-level header carrying the total AI-span count.
 
 ---
 
@@ -95,13 +92,13 @@ Human spans:     [HOLD — AI-only variant and human-span forms are unresolved]
 
 ### Reference and Provider Scope
 
-[PROPOSED] PROPOSAL 007 is not implemented or deployed. Any provider-facing marking flow depends on provider cooperation and on a completed marker, boundary, and verification grammar. No provider-integration cost, deployment schedule, or cross-provider interoperability is established.
+[PROPOSED] PROPOSAL 007 is not deployed. Provider-facing marking depends on provider cooperation. If an AI provider's output contains no header, the LLM must place the document-level header at the beginning of the generated text. No provider-integration cost, deployment schedule, or cross-provider interoperability is established.
 
 [HOLD — LANGUAGE MIGRATION] JavaScript/Node.js remains a reference implementation environment. Runtime throughput, typed integration contracts, binary hash representation, CPU concurrency, and cross-language transport are production dependencies; they do not block a working-group submission, but they do block production-deployment or commercial-SLA claims.
 
 ### What AI Providers Should Change
 
-[HOLD] Provider changes cannot be specified until the marker grammar, span-boundary rules, and human-span policy are defined. Provider cooperation is an external dependency, not a property that this proposal can enforce.
+[HOLD] Providers must use the defined AI span grammar and document-level header. Provider cooperation is an external dependency, not a property that this proposal can enforce.
 
 ### Arbitrary Position Placement
 
@@ -113,9 +110,17 @@ Human spans:     [HOLD — AI-only variant and human-span forms are unresolved]
 
 ### What a Verifier Does
 
-[HOLD / PENDING CROSS-CHECK] A verifier can make deterministic calculations only after the recognised marker grammar, paragraph-boundary grammar, expected-count source, ordinal or header encoding, damaged-marker discard rules, and surviving-span character-count rules are defined.
+[HOLD / PENDING CROSS-CHECK] The verifier normalizes the input before scanning: it strips a leading U+FEFF at position 0 and trailing U+0020, U+000A, and U+000D codepoints, logging their hex values and count. It scans the approved library, records the first valid document header, and matches valid AI open and close markers in document order. E001–E011 are the complete verifier output.
 
-[RESEARCH] Candidate metrics are placeholders: valid surviving pairs divided by a generation-time total; valid AI-marked characters divided by bounded paragraph characters; unmarked bounded characters divided by bounded paragraph characters; and damaged identifiers divided by a generation-time total. The denominator is unknown without valid boundaries and a generation-time total. No confidence calculation is defined.
+### Verification Semantics
+
+| Condition | Required verifier result |
+|---|---|
+| Valid header and valid AI pairs survive | Report surviving pairs, header total, and survival rate = pairs ÷ header total. |
+| Valid header survives and zero AI pairs survive | Report the header total as a generation-time signal; state that the header is present and no span signal survives. Do not infer stripping. |
+| No valid header and valid AI pairs survive | Report surviving pairs; state that the generation-time total is unknown and survival rate is not computable. |
+| No valid header and no valid AI pairs survive | Return `NO_VALID_MARKDOWN_FOUND`. Do not infer stripping or provenance. |
+| Standalone U+2060 fails the position-1 type check | Discard it without reporting or including it in a calculation. |
 
 ### What the Output States
 
@@ -125,16 +130,16 @@ Human spans:     [HOLD — AI-only variant and human-span forms are unresolved]
 
 ### Damage Degree Reporting
 
-[HOLD] Damage-degree reporting, completeness calculations, expected counts, and the interpretation of gaps or orphaned markers remain undefined. They are not evidence of a specific modification event.
+[HOLD] Excess opens and closes are orphaned markers (E007 and E008) and are not counted as valid pairs. Internal approved-library codepoints at non-marker positions within a valid pair trigger INTERNAL_SIGNAL (E009); the pair remains valid and counted. Surviving valid pairs exceeding the header total trigger IMPOSSIBLE_COUNT (E010); the pairs are not suppressed.
 ---
 
 ## Survival Characteristics
 
 ### Scoped Test State
 
-[IMPLEMENTED — SCOPED] The browser matrix is a 135-card render test using 18px, 15px, and 12px cards. It assigns codepoints during construction and serves as an embed–copy–paste–verify round-trip research tool.
+[IMPLEMENTED — SCOPED] The browser matrix is a 45-card render test. Layout survival at 12px and 15px is confirmed clean; those cards are removed for test efficiency. Nine 18px bidi cards—three Arabic, three Hebrew, and three Persian—are added. The tool is a render test with an attached embed–copy–verify utility. It is not a validated round-trip test until T.Clipboard instrumentation confirms post-clipboard codepoint-array integrity and embedding-dropdown decoupling is implemented.
 
-[PENDING CROSS-CHECK] This tool does not establish final card-count, injection, platform-survival, or interoperability claims. Compound three-codepoint round trips; pasted-codepoint instrumentation; messenger, social-media, Windows, mobile, LLM API, GitHub, IDE, sanitizer, scraper, and renderer transit remain to be tested.
+[PENDING CROSS-CHECK] This tool does not establish injection, platform-survival, or interoperability claims. Compound three-codepoint round trips; pasted-codepoint instrumentation; messenger, social-media, Windows, mobile, LLM API, GitHub, IDE, sanitizer, scraper, and renderer transit remain to be tested.
 
 ### Known Stripping and Rendering Limits
 
@@ -164,17 +169,15 @@ Human spans:     [HOLD — AI-only variant and human-span forms are unresolved]
 
 ### The Collaborative Path
 
-[PROPOSED] Provider adoption and crawler or training-pipeline interpretation are cooperative external dependencies. A working-group process may define an interoperable grammar; the candidate codepoints, sequences, boundaries, and counting rules remain unselected.
+[PROPOSED] Provider adoption and crawler or training-pipeline interpretation are cooperative external dependencies. The grammar defines conforming behavior; it does not enforce conformance.
 
 ---
 
 ## Open Questions — Requires Working Group Input
 
-- **[HOLD] Codepoint set lock.** The candidate pool and compound grammar must be confirmed or replaced. No candidate pool is cleared or selected.
+- **[HOLD] Header scope beyond a document.** A document-level header cannot distinguish independently generated sections in a multi-section web page. Per-paragraph header scoping remains open.
 
-- **[HOLD] Human-span elimination and paragraph boundaries.** Whether human spans are separately marked or inferred from unmarked text, and the required paragraph-boundary grammar, remain unresolved.
-
-- **[HOLD] Ordinal, header, and calculation rules.** Ordinal encoding, header total-count encoding, expected-count source, damaged-marker discard rules, span character-count rules, and confidence calculations remain undefined.
+- **[HOLD] Lens 200 boundary.** Embedding positions for inputs longer than 200 visible characters are undefined. This is a testing-tool concern only.
 
 - **[RESEARCH / PENDING CROSS-CHECK] Collision and security handling.** Mathematical-content collisions, LLM spontaneous-output collision rates, and scanner, sanitizer, or scraper handling require reproducible testing and source discipline.
 
@@ -186,7 +189,7 @@ Human spans:     [HOLD — AI-only variant and human-span forms are unresolved]
 
 ## What Has Been Built
 
-[IMPLEMENTED — SCOPED] `test-proposal-007-markers.html` is a browser render and embed–copy–paste–verify round-trip research tool. It does not establish final carrier survival, injection, platform, or interoperability results.
+[IMPLEMENTED — SCOPED] `test-proposal-007-markers.html` is a browser render test with an attached embed–copy–verify utility. It is not a validated round-trip test until T.Clipboard instrumentation confirms post-clipboard codepoint-array integrity and embedding-dropdown decoupling is implemented.
 
 [PENDING CROSS-CHECK] Compound-sequence survival and all cross-platform transit results remain open.
 
@@ -195,13 +198,13 @@ Human spans:     [HOLD — AI-only variant and human-span forms are unresolved]
 ## Implementation Status
 
 ```
-Marker design:          [HOLD] Candidate direction only; grammar not locked
-Codepoint selection:    [PENDING CROSS-CHECK / SECURITY] Candidate pool not cleared
-Compound sequence:      [HOLD] Candidate AI forms only; survival unconfirmed
-Human-span policy:      [HOLD] AI-only variant and boundaries unresolved
-Ordinal/header scheme:  [HOLD] Not selected
-Verifier logic:         [HOLD / PENDING CROSS-CHECK] Calculations not defined
-Test tool:              [IMPLEMENTED — SCOPED] Render/round-trip research tool
+Marker design:          [HOLD] AI-only grammar defined
+Codepoint selection:    [PENDING CROSS-CHECK / SECURITY] Approved library U+2060–U+2064
+Compound sequence:      [HOLD] Defined AI open and close markers
+Human-span policy:      [HOLD] Human markers removed from main grammar
+Ordinal/header scheme:  [HOLD] Document-level header; no per-span ordinal or total count
+Verifier logic:         [HOLD / PENDING CROSS-CHECK] Deterministic header and pair verification defined
+Test tool:              [IMPLEMENTED — SCOPED] Render test with attached embed–copy–verify utility
 Provider integration:   [PROPOSED] Requires external provider cooperation
 Runtime status:         [HOLD — LANGUAGE MIGRATION] JavaScript reference only
 A.8R relationship:      [PROPOSED] Complementary LPS redundancy research; not C2PA Text A.9
