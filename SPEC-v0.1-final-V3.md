@@ -685,6 +685,82 @@ Certificate fingerprint mismatch — returns failed.
 Missing signal — returns degraded with anti_forensic_note.
 Corrupted signal — returns degraded.
 
+### Proposal 007 browser testing-tool evidence [OBSERVED — SCOPED]
+
+This subsection records optional PROPOSAL 007 testing-tool observations;
+it is not a v0.1 A.8 embedding, verification, or test-suite requirement.
+PROPOSAL 007 uses a cooperative U+2060–U+2064 marker grammar and remains
+forgeable, not cryptographic authentication. Its results do not alter the
+v0.1 signed-manifest verification outputs or the Section 5 trailing-strip
+rule.
+
+[PENDING CROSS-CHECK] The observations do not confirm round trips through
+other browsers or renderers; messengers or social-media platforms; API or
+LLM channels; Windows or Linux; sanitizers, crawlers, IDEs, mobile platforms,
+or external transports. Those channels remain pending cross-check. The
+testing tool does not establish a universal browser clipboard, transport, or
+injection-path rule.
+
+For the first retained U+2060 row, ordinary double-click selection and copy
+through JavaScript `textContent`, HTML entity, and JavaScript
+`insertAdjacentText` injection paths preserved one valid document-level
+header and one valid AI pair across Georgia, System UI, and Menlo. The
+Proposal 007 verifier recorded one surviving pair against a header total of
+one and reported `100.0% (1 / 1)`. The pasted browser-test value contained
+two trailing U+000A codepoints. Under the Proposal 007 verifier's defined
+trailing-normalization rule, those codepoints are handled as trailing
+transport/clipboard whitespace, not application-generated marker content;
+the valid document-level header and AI pair survive.
+
+Endpoint-sensitive drag selection produced different pasted codepoint
+sequences: a complete document-level header and AI pair, header-only input,
+orphaned open or close markers, or no valid document-level header or AI pair.
+E007, E008, E011, and `NO_VALID_MARKDOWN_FOUND` where applicable describe
+the pasted codepoint sequence only. They do not prove stripping, provenance,
+AI origin, or application mutation. Command-modified drag selection was
+inconsistent: both full survival and partial or no-valid-signal outcomes were
+observed. This is a scoped selection-behaviour observation, not a deterministic
+font or injection defect.
+
+| Injection path | Scoped observed selection outcome |
+|---|---|
+| JavaScript `textContent` | Complete selections survived; modified drag selections could yield orphaned-close/no-valid-signal results. |
+| HTML entity | Selection endpoint and drag direction could produce full survival, header-only/orphaned-open results, or no valid signal. |
+| JavaScript `insertAdjacentText` | Selection endpoint and drag direction could produce full survival, header-only/orphaned-open results, orphaned-close/no-valid-signal results, or no valid signal. |
+
+[LIMITATION] No injection path is generally safer than another on this
+evidence; the observed outcome depends on the selected range. The Proposal
+007 verifier uses the E001–E011 result vocabulary. Its pathological generator
+exercised controlled verifier inputs with supplied `header total 1 / AI spans
+1`; it is not a production embedding path.
+
+| Mode | Observed result |
+|---|---|
+| Malformed sequence | E001 `TRUNCATED_MARKER` |
+| Reordered fields | E002 `INVALID_TYPE` |
+| Duplicate header | E006 `DUPLICATE_HEADER`; the first valid document-level header remains authoritative |
+| Orphaned open | E007 `ORPHANED_OPEN` |
+| Orphaned close | E008 `ORPHANED_CLOSE` |
+| Trailing normalization | Valid document-level header and AI pair survive after normalization |
+| Internal codepoints | E009 `INTERNAL_SIGNAL`; the valid AI pair remains counted |
+
+[LIMITATION] In the testing tool, re-embedding text that already contains
+PROPOSAL 007 signals does not remove the prior signals. Repeated embedding
+can create compound input and verifier errors. A production policy for
+pre-embedded input remains undefined and requires separate design work; this
+does not infer how an LLM, provider, or external system must treat
+pre-embedded input.
+
+[OBSERVED — SCOPED] Arabic, Hebrew, and Persian cards use the existing
+Georgia, System UI, and Menlo assignments. The PROPOSAL 007 marker grammar
+does not use LRM, RLM, bidi embeddings, overrides, or isolates. RTL
+visual-selection behaviour and copied-range boundaries remain
+browser-rendering/selection concerns, not evidence that language content
+strips markers. The row labelled U+2060 contains a complete document-level
+header and full AI open/close pair; it is not an isolated-U+2060 survival
+test. Bidi transport, renderer, accessibility, and cross-platform questions
+remain pending cross-check.
+
 ### Outstanding test gaps
 - Malformed CBOR input to verificationTool.mjs
 - [Closed 2026-07-07] A.9 extraction test gap — closed. A.8 is the only extraction path. No A.9 test required or applicable.
