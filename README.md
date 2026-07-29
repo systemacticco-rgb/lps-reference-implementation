@@ -1,4 +1,3 @@
-# lps-reference-implementation```markdown
 # LPS Reference Implementation
 
 **Repository:** lps-reference-implementation (private)
