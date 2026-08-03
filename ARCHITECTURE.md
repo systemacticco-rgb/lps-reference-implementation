@@ -1,200 +1,136 @@
 # LPS Architecture
-## High-level system map for the reference implementation
 
-This document explains how the LPS system fits together at a level above the implementation spec. It is intentionally high-level. The private `SPEC.md` remains the source of truth for code-level behavior. The public LPS proposal and working-group submission remain the source of truth for the standards-facing claims.
+## Purpose and scope
 
-## 1. What LPS is
+This document explains the audited reference implementation as a system: its
+components, control flow, trust boundaries, and failure boundaries. It is
+non-normative. [`SPEC.md`](SPEC.md) owns the exact interface and result
+contract; [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) owns the
+evidence and deferred-work record.
 
-LPS (Linguistic Provenance Schema) is a proposed contribution-provenance layer for text. It records, at span level, whether a section was human-authored, AI-generated, or human text later modified by AI, along with confidence and modification degree. It does not replace C2PA or SynthID. It sits alongside them.
+LPS binds visible text to an authenticated provenance manifest, embeds the
+signed envelope in a carrier, verifies the envelope and text binding, and can
+recover limited provenance state from an exact canonical-text-hash registry
+lookup when a carrier is unavailable or unusable. The audited pipeline is:
 
-The current reference implementation proves that this model can be generated, signed, embedded, extracted, and verified with a modular pipeline. The next architectural step is Proposal 005, which adds redundant embedding and recovery paths.
+```text
+visible text → manifest → signed envelope → compressed CBOR → embedded carrier
+visible text + carrier → extraction → validation → cryptographic verification → result
+carrier unavailable → exact canonical-text hash → registry recovery result
+```
 
-## 2. Repository boundary
+LPS is an independent reference implementation. Use of a selector carrier or
+the `c2pa-text` library does not establish C2PA conformance, SynthID
+interoperability, or conformance with another AI-watermarking system.
 
-The public repository contains the proposal and the working-group submission. It is for reviewers, standards contributors, and external readers.
+## Components and responsibilities
 
-The private repository contains the reference implementation. It is for building, testing, and auditing the code.
+| Component | Responsibility | Architectural boundary |
+|---|---|---|
+| `manifestGenerator.mjs` | Builds the inner manifest from visible text and segments. | Applies the LPS trailing CR/LF/U+0020 strip and derives both `text_hash` and `text_length` from the resulting UTF-8 bytes. It holds `content_signed_at` and confidence provenance. |
+| `confidenceFallback.mjs` | Provides confidence only when it was not supplied. | The current contract distinguishes `tool` from `fallback`; a fallback value is not tool-supplied evidence. |
+| `signingLayer.mjs` | Creates the authenticated outer envelope. | Emits direct outer `ev: 1` and outer `signed_at`; both it and the inner manifest fields are authenticated. |
+| `compression.mjs` | Encodes and decodes the envelope for carriage. | Preserves direct outer `ev`; the version field is not a `FIELD_MAP` entry. |
+| `embeddingLayer.mjs` | Carries and extracts the encoded envelope without changing visible text. | The carrier is transport, not proof; visible text remains independently bound by hash and byte length. |
+| `verificationTool.mjs` | Classifies carrier state, validates the envelope, verifies it, checks text binding, and routes the result. | It rejects duplicate top-level envelope keys before version routing, cryptography, certificate retrieval, registry access, or fallback. |
+| `registryClient.mjs` | Looks up and validates exact canonical-text-hash recovery records. | Registry data corroborates an exact hash only; it is not issuer authentication or a normal valid-carrier dependency. |
 
-The documents must not be mixed. Public documents explain the standard. Private documents explain the implementation. Personal notes and working drafts stay outside both.
+## Generation path
 
-## 3. System components
+1. The manifest generator strips trailing U+000D, U+000A, and U+0020 from
+   visible text.
+2. It converts that canonical text to UTF-8 bytes and derives both its
+   SHA-256 `text_hash` and byte `text_length` from those same bytes.
+3. It records the source record/commitment time as `content_signed_at` and
+   records whether each confidence value is `tool`-supplied or `fallback`-
+   derived.
+4. The signing layer creates the outer envelope with authenticated `ev: 1`
+   and `signed_at` metadata.
+5. Compression and embedding create the carrier. Neither operation changes
+   the visible text that the manifest binds.
 
-Current v0.1 components:
+## Verification and recovery path
 
-- `manifestGenerator.mjs` creates the manifest from segment data.
-- `confidenceFallback.mjs` supplies fallback confidence when the tool does not provide it.
-- `compression.mjs` shortens the manifest for embedding.
-- `signingLayer.mjs` signs the manifest with ES256 using Node.js built-in crypto.
-- `embeddingLayer.mjs` embeds and extracts the signed manifest using `c2pa-text`.
-- `verificationTool.mjs` extracts, verifies, classifies the verification state, and renders the result.
-- `registryClient.mjs` stores and retrieves server-side registry records in the stub implementation.
-- `lps-local-test-server.mjs` supports local testing.
-- `diag.mjs` supports diagnostics.
+The verifier does not treat every extraction problem alike. Its boundary is:
 
-Planned but not yet built:
+```text
+duplicate top-level key     → invalid_envelope (no routing or external I/O)
+parseable invalid envelope  → invalid_envelope (no registry fallback)
+valid, parseable carrier    → normal certificate, signature, and text-binding path
+absent/corrupted/unparseable carrier
+                           → exact canonical-text-hash registry recovery path
+```
 
-- `chunkLayer.mjs`
-- `anchorLayer.mjs`
-- `paragraphAnalysis.mjs`
-- the full Proposal 005 reconstruction path
-- the full production registry architecture
-- the trust-list implementation
-- the future COSE/JWS envelope path
+For a valid carrier, normal processing produces `verified` when the signature,
+certificate fingerprint, and text binding pass, or `failed` when the signed
+claim cannot be validated against the received text. The canonical contract
+for version errors, invalid-envelope reasons, and result fields is in
+[`SPEC.md`](SPEC.md).
 
-## 4. End-to-end data flow
+For carrier recovery, a matching registry record yields `registry_required /
+registry_match`; a miss is `degraded / registry_no_match`. Transport or HTTP
+failure is `degraded / registry_unavailable`; malformed or incomplete registry
+data is `degraded / registry_response_invalid`. The carrier condition remains
+visible for recovery results. None of those states is `verified`.
 
-The current system flow is:
+## Trust and failure boundaries
 
-Text input
-→ segment mapping
-→ manifest generation
-→ confidence assignment
-→ compression
-→ signing
-→ embedding
-→ extraction during verification
-→ signature check
-→ text-hash check
-→ registry lookup if needed
-→ verification state output
+### Text and envelope
 
-The visible text is not the same thing as the manifest. The manifest is the provenance record. The signature binds the manifest. The embedding layer carries the signed manifest inside the text. The verification tool compares the extracted text against the signed text hash and reports the appropriate state.
+Visible text and carriers are untrusted input until processing completes. The
+text hash and byte length bind the same canonical UTF-8 sequence, so a matching
+hash alone is not the complete text-binding check. The authenticated envelope
+contains the inner `content_signed_at` and outer `signed_at` with distinct
+meanings: source record/commitment time and LPS complete-envelope signing time,
+respectively.
 
-## 5. Trust boundaries
+### Certificate boundary
 
-The main trust boundaries are:
+The implementation has runtime-confirmed verification through its configured
+allowed HTTPS certificate retrieval route. Certificate fingerprint and
+signature verification are part of that path. This does not establish issuer
+trust, certificate revocation, rotation, lifecycle governance, or a
+production credential policy.
 
-- The visible text is untrusted until verified.
-- The manifest is trusted only if its signature validates.
-- The embedded carrier is only a transport mechanism, not the source of truth.
-- The registry is a recovery path, not the primary provenance record.
-- The certificate is trusted only after its fingerprint matches the expected value.
-- The generating AI tool is the authoritative source of confidence when it supplies confidence directly.
+### Registry boundary
 
-A second source of truth is avoided wherever possible. If two layers disagree, the verifier should report that disagreement instead of trying to silently repair it.
+The registry is used only for explicit recovery after an absent, corrupted, or
+unparseable carrier. An exact match corroborates a generation-time record for
+the canonical text hash; it cannot restore span-level evidence, explain carrier
+loss, establish provider origin, or make a carrier-free artifact in-band
+verified.
 
-## 6. Cryptographic flow
+### Identity and provenance boundary
 
-The cryptographic path is deliberately narrow:
+`generating_id` has only minimal safety validation in the audited scope. A
+valid signature, hosted certificate, or certificate fingerprint does not make
+an issuer authorized. Likewise, an LPS assertion is not independent
+provider-origin evidence without a separate verified provider attestation.
 
-1. The manifest is serialized to bytes.
-2. The bytes are signed with ES256.
-3. The signature uses IEEE P1363 raw r‖s encoding.
-4. The certificate is distributed separately through a public URL plus fingerprint.
-5. The verifier fetches the certificate, confirms the fingerprint, and checks the signature.
-6. The verifier hashes the extracted clean text and compares it to `text_hash`.
+## Deferred production boundaries
 
-Important boundaries:
+The audit does not establish production readiness. The following are deferred:
 
-- The implementation uses Node.js built-in crypto.
-- The implementation does not implement cryptographic primitives from scratch.
-- The current reference implementation is primitive-level interoperable with ES256 tooling.
-- The manifest itself is not currently packaged as a standard COSE_Sign1 or compact JWS envelope.
-- Envelope-level interoperability is a future version target, not current state.
+- certificate issuer trust, revocation, rotation, and lifecycle governance;
+- production key management, credential isolation, and non-test signing
+  controls;
+- a complete canonical-CBOR profile and decoder resource bounds;
+- broader cryptographic-profile decisions, including P-256 and HMAC/HKDF;
+- formal provider, issuer, and `generating_id` identity semantics; and
+- registry SLOs, monitoring, retry policy, incident response, and rollback.
 
-## 7. Verification flow
+Future provider attestation and authorized-issuer governance are trust-model
+questions, not features implied by the current reference implementation.
 
-The verifier performs the following sequence:
+## Documentation map
 
-- extract the embedded manifest
-- verify the signature
-- confirm certificate validity
-- hash the clean extracted text
-- compare that hash with the signed `text_hash`
-- if needed, query the registry
-- return a structured verification state
-
-Built v0.1 states:
-
-- `verified`
-- `failed`
-- `degraded`
-- `registry_required`
-
-Planned Proposal 005 states:
-
-- `anchor_only`
-- `partial_recovery`
-- `injection_detected`
-- `reconstruction_corrupted`
-
-The Proposal 005 states are architectural definitions only at this stage. They do not exist in the current reference implementation.
-
-## 8. Implementation status
-
-Built and tested in v0.1:
-
-- manifest generation
-- signing
-- embedding
-- verification
-- confidence fallback
-- registry stub
-- current test suite for the built pipeline
-
-Defined but not yet built:
-
-- redundant embedding
-- anchor manifests
-- paragraph-level reconstruction
-- cross-copy recovery
-- trust-list enforcement
-- production registry governance
-- full envelope interoperability
-
-Partially implemented:
-
-- registry storage and lookup via Supabase stub
-- registry-required verification path
-
-Intended but not yet implemented in the current reference implementation:
-
-- certificate revocation checking
-- full production registry access control
-- HMAC-protected anchors
-- chunk reconstruction logic
-- session-anchor certificate pinning
-- magic-prefix reconstruction safeguards
-
-## 9. Security model
-
-The security model is conservative.
-
-The system assumes the following:
-
-- manifests may be tampered with
-- carriers may be stripped
-- certificates may be invalid or revoked
-- registry data may be absent
-- verification may happen long after generation
-- future proposals may introduce new recovery states
-
-The system does not assume:
-
-- honest input
-- intact carriers
-- a trusted transport layer
-- a single verification path
-- a single implementation environment
-
-The verifier should fail visibly when it cannot prove integrity, rather than silently infer correctness.
-
-## 10. Document map
-
-Use the documents this way:
-
-- `SPEC.md` — implementation rules and normative build behavior
-- public LPS README / proposal — public explanation of the standard
-- working-group submission — review-facing argument and status summary
-- this file — architecture map
-- `CHANGELOG.md` — versioned change history (absorbed former RESEARCH.md content)
-- `IMPLEMENTATION_STATUS.md` — build status (absorbed former PROPOSALS.md forward-looking content)
-
-Note: `RESEARCH.md` and `PROPOSALS.md` were removed from this repository
-on July 3 2026. Their content was folded into `CHANGELOG.md` and
-`IMPLEMENTATION_STATUS.md` respectively — see the private README's
-"What Is Not In This Repository" section.
-
-## 11. Core takeaway
-
-LPS is a layered provenance system: manifest generation defines what is being claimed, signing protects that claim, embedding carries it through text transport, verification checks integrity, and the registry recovers evidence when the embedded carrier is lost. The current codebase proves the baseline architecture. Proposal 005 extends it with redundancy and recovery without changing the fundamental separation between provenance, transport, and verification.
+- [`public-repo/working-group-submission.md`](public-repo/working-group-submission.md)
+  is the reviewer-facing explanatory map and records the bounded current scope.
+- [`public-repo/README.md`](public-repo/README.md) is the concise public entry
+  point.
+- [`SPEC.md`](SPEC.md) defines the exact wire and result contract.
+- [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) records audited
+  validation evidence and production-only follow-ups.
+- [`SECURITY_MODEL.md`](SECURITY_MODEL.md) owns security controls and
+  non-production exclusions.
+- [`CHANGELOG.md`](CHANGELOG.md) records dated factual changes.

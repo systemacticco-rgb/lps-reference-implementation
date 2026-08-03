@@ -3,7 +3,7 @@ import { signManifest } from './signingLayer.mjs';
 import { embedManifest } from './embeddingLayer.mjs';
 import { extractManifest } from 'c2pa-text';
 import { decompress, decodeFromCBOR } from './compression.mjs';
-
+import assert from 'node:assert/strict';
 /*
  * [I.1] WHAT THIS FILE DOES
  * This test runs Stages 1, 2, and 3 in sequence — the full build side
@@ -36,30 +36,36 @@ const visibleText = "This is a test sentence written by a human. The rest was ge
  * which used a fixed date, this test uses the actual current time.
  * The text hash produced here will be unique to this exact visibleText string.
  */
-
+const contentSignedAt = '2026-08-02T00:00:00.000Z';
 const manifest = generateManifest({
   visibleText,
   segments: [
-    {
-      segmentId: "s001",
-      startOffset: 0,
-      endOffset: 44,
-      origin: "human",
-      confidence: 0.95
-    },
-    {
-      segmentId: "s002",
-      startOffset: 45,
-      endOffset: visibleText.length - 1,
-      // visibleText.length - 1 = the last character index. Offsets are inclusive.
-      origin: "ai_generated",
-      aiTool: "claude-sonnet-4",
-      confidence: 0.98
-    }
+  {
+    segmentId: 's001',
+    startOffset: 0,
+    endOffset: 43,
+    origin: 'human',
+    confidence: 0.95,
+  },
+  {
+    segmentId: 's002',
+    startOffset: 44,
+    endOffset: visibleText.length - 1,
+    origin: 'ai_generated',
+    aiTool: 'claude-sonnet-4',
+    confidence: 0.98,
+  },
   ],
   signingTool: "lps-reference-implementation-v0.1",
-  signedAt: new Date().toISOString()
+  contentSignedAt: contentSignedAt
 });
+
+assert.equal(manifest.content_signed_at, contentSignedAt);
+assert.equal(Object.hasOwn(manifest, 'signed_at'), false);
+assert.equal(
+  manifest.text_length,
+  Buffer.byteLength(visibleText.replace(/[\r\n ]+$/, ''), 'utf8')
+);
 
 /*
  * [I.4] SIGNING AND EMBEDDING — STAGES 2 AND 3
@@ -73,6 +79,12 @@ const manifest = generateManifest({
 const signedManifest = signManifest(manifest);
 const embeddedText = embedManifest(visibleText, signedManifest);
 
+assert.equal(signedManifest.ev, 1);
+assert.equal(signedManifest.manifest.content_signed_at, contentSignedAt);
+assert.equal(typeof signedManifest.signed_at, 'string');
+assert.ok(signedManifest.signed_at.length > 0);
+assert.ok(signedManifest.signature);
+
 /*
  * [I.5] CHECK 1 — VISIBLE TEXT UNCHANGED
  * extractManifest() from c2pa-text scans the embedded text and splits it
@@ -85,7 +97,8 @@ const embeddedText = embedManifest(visibleText, signedManifest);
 
 console.log("--- Step 1: Visible text unchanged? ---");
 const extracted = extractManifest(embeddedText);
-console.log(extracted.cleanText === visibleText ? "PASS" : "FAIL");
+assert.ok(extracted);
+assert.equal(extracted.cleanText, visibleText);
 
 /*
  * [I.6] CHECK 2 — BINARY PAYLOAD RECOVERABLE
@@ -97,7 +110,7 @@ console.log(extracted.cleanText === visibleText ? "PASS" : "FAIL");
  */
 
 console.log("\n--- Step 2: Manifest bytes extracted? ---");
-console.log(extracted.manifest !== null ? "PASS" : "FAIL");
+assert.ok(extracted.manifest);
 
 /*
  * [I.7] CHECK 3 — MANIFEST RECOVERABLE FROM BINARY
@@ -121,16 +134,19 @@ console.log(extracted.manifest !== null ? "PASS" : "FAIL");
  * That is the core claim of the pipeline. This test proves it.
  */
 
-console.log("\n--- Step 3: Manifest recoverable from bytes? ---");
-try {
-  const recovered = decompress(decodeFromCBOR(extracted.manifest));
-  console.log(recovered.signature ? "PASS" : "FAIL");
-  console.log("\n--- Recovered manifest summary ---");
-  console.log("Algorithm:", recovered.algorithm);
-  console.log("Signed at:", recovered.signed_at);
-  console.log("Segments:", recovered.manifest.content_segments.length);
-  console.log("Signature present:", !!recovered.signature);
-  // !! converts the signature string to a boolean. Any non-empty string = true.
-} catch (err) {
-  console.log("FAIL —", err.message);
+const recovered = decompress(decodeFromCBOR(extracted.manifest));
+
+assert.equal(recovered.ev, 1);
+assert.equal(recovered.signed_at, signedManifest.signed_at);
+assert.equal(
+  recovered.manifest.content_signed_at,
+  contentSignedAt
+);
+assert.equal(recovered.manifest.text_hash, manifest.text_hash);
+assert.equal(recovered.manifest.text_length, manifest.text_length);
+assert.equal(recovered.manifest.content_segments.length, 2);
+assert.ok(recovered.signature);
+
+for (const segment of recovered.manifest.content_segments) {
+  assert.equal(segment.confidence_source, 'tool');
 }

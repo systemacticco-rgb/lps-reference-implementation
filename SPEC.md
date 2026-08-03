@@ -3,7 +3,11 @@ Version: 0.1-draft
 This document mixes implemented behavior with forward-looking
 architectural specifications. Every section must explicitly
 identify whether it is Built, Defined, Planned, or Placeholder.
-Status: Skeleton — sections marked [DEFINED], [PLACEHOLDER], [SECURITY-CRITICAL]
+Status: [CURRENT AUDITED CONTRACT] v0.1 reference implementation. This
+specification defines the current interface and behavioral contract for the
+audited scope; it does not approve production deployment, governance, or
+interoperability. Historical and proposal-only material below is subordinate to
+the current contract where it differs.
 
 ---
 
@@ -13,262 +17,146 @@ Status: Skeleton — sections marked [DEFINED], [PLACEHOLDER], [SECURITY-CRITICA
 - No mixed responsibilities
 - Audited libraries only — no custom cryptographic implementations
 - Every function must be independently testable
-- AI agents follow this specification exactly. If implementation
-status is not explicitly marked as built, treat the feature as
-undefined rather than making architectural assumptions.
+- Current-audited-contract sections define the supported behavior. Built
+  implementation notes describe the audited reference path; deferred,
+  placeholder, and historical material does not authorize additional behavior.
+
+[HOLD — LANGUAGE MIGRATION] JavaScript/Node.js is the reference runtime
+for v0.1. Runtime latency, typed contracts, binary-hash handling, CPU
+concurrency, and cross-language transport are production dependencies,
+not submission blockers. This specification defines no migration plan,
+benchmark, or production-service architecture.
 
 ---
 
-## 1. Input Format [DEFINED — v0.1]
-What the manifest generator receives as input.
-- Content: string (plain text for v0.1)
-- Segments: array — start offset, end offset, origin type
-- Origin types: "human" | "ai_generated" | "ai_modified_human"
-- AI tool identifier: string
-- Modification degree: float 0-1 (required for ai_modified_human only)
-- Confidence: integer 0-100 (see 1.1)
-- Timestamp: ISO 8601
+## 0.1 Standards-Conformance Boundary [PRE-3 — PENDING]
+
+PRE-3 is a bounded evidence sweep, not a feature or architecture decision.
+Before any external standards wording is expanded, it must inventory every
+LPS claim involving C2PA, COSE, JOSE, RFC 3161, X.509, SHA-256, signatures,
+certificates, canonicalization, or validation; map each one to the applicable
+normative requirement; independently test it; and classify it as supported,
+unsupported, incomplete, or outside LPS scope. Its outputs are a
+claim-to-standard matrix, exact standards/version references, test-vector and
+independent-parser results, deviations/non-claims, and a remediation list.
+
+The v0.1 carrier is an LPS selector-based JSON/native-cryptography format.
+It does not emit the C2PA Appendix A.8-required C2PA Manifest Store in JUMBF
+format or a C2PA COSE_Sign1_Tagged claim signature. Use of selector code
+points alone would not supply that required C2PA structure. Terms such as A.8
+in this specification are legacy LPS route labels unless explicitly
+describing the C2PA standard; they are never proof of C2PA conformance. C2PA
+describes its selected variation selectors as valid Unicode and visually
+non-rendering, so do not assert generic Unicode non-conformance without an
+exact violated rule.
+
+The primary LPS selector-carrier submission decision is closed internally. It
+does not make the carrier a C2PA A.8 implementation or close PRE-3.
+
+LPS trailing-whitespace normalization is an internal text-hash rule. It is
+not C2PA A.8 c2pa.hash.data validation, which has distinct NFC UTF-8 and
+wrapper-offset requirements. C2PA's handling of skipped online OCSP checks
+must not be restated as a mandatory C2PA revocation requirement.
+
+[DEFERRED] Proposal 005 must not be built or pre-submission revised before
+working-group feedback. Proposal 006 remains under review until after
+submission. The audited registry is limited to exact-hash recovery; formal
+provider, issuer, and `generating_id` identity semantics and any future
+identifier grammar remain deferred.
 
 ---
 
-## 1.1 Confidence Value — Source of Truth and Fallback [DEFINED — v0.1]
+## 1. Manifest input and confidence provenance [CURRENT AUDITED CONTRACT]
 
-### Primary source — mandatory
-The generating AI tool is the authoritative source of confidence.
-When an AI tool produces or modifies a segment, its API response
-must supply the confidence value for that segment directly.
-This is the only source that reflects first-person certainty
-about the origin classification. No other source supersedes it.
+The manifest generator accepts visible text, segment information, a
+`content_signed_at` source-record timestamp, and optional per-segment
+confidence. Current origin values are `human`, `ai_generated`, and
+`ai_modified_human`.
 
-### Fallback source hierarchy
-When the generating tool does not supply a confidence value,
-the following sources are used in priority order:
+`confidence_source` has two current values:
 
-1. Output from an approved AI detection classifier, mapped to 0–100.
-2. Human reviewer manual assignment, integer 0–100.
-3. Mathematical fallback — see 1.2.
+```text
+tool      = confidence supplied by the generating tool
+fallback  = confidence calculated by LPS because confidence was absent
+```
 
-### Validation rules at entry point
-generateManifest() applies these rules to every segment:
-- Confidence must be an integer between 0 and 100 inclusive.
-- If confidence is a float (e.g. 0.95), multiply by 100 and round
-  to nearest integer.
-- If confidence is absent, the mathematical fallback defined in
-  1.2 runs automatically.
-- If confidence is present but outside 0–100 range,
-  generateManifest() throws.
-- Confidence is never null in the output manifest.
-  The fallback guarantees a value.
+No classifier, human-reviewer, provider-attestation, or other `derived` source
+is part of the current audited contract. A fallback value is an approximation,
+not a forensic measurement or provider-origin assertion. The verifier returns
+the confidence value together with `confidence_source`.
 
-### Modification degree
-Cannot be derived mathematically. The pipeline never sees the
-original human text before AI modification occurred. Only the
-tool that performed the modification knows the before state.
-If modification_degree is absent on an ai_modified_human segment,
-generateManifest() throws. It is a required field with no fallback.
+The locked confidence regression object is:
 
----
+```js
+{ ai_generated: 82, ai_modified_human: 15, human: 1 }
+```
 
-## 1.2 Confidence Fallback — Mathematical Derivation [DEFINED — v0.1]
+`confidence_source` is preserved through compression, embedding, and
+verification. The current shorthand dictionary includes `csrc` for this field.
 
-When no confidence value is supplied by the generating tool or
-any fallback source, generateManifest() calculates a rough
-approximation from the segment's own character distribution
-relative to the full document.
+## 2. Manifest and envelope contract [CURRENT AUDITED CONTRACT]
 
-### Method
-For each segment, calculate the proportion of characters
-belonging to each origin type across the full document.
-A segment whose character range is dominated by a single origin
-type receives a higher fallback confidence than a mixed or
-ambiguous range. The fallback confidence assigned to a segment
-equals the document-wide percentage of characters sharing
-that segment's origin type, floored to the nearest integer.
+The current contract separates the inner manifest from the authenticated outer
+envelope:
 
-### Example — document of 507 characters, seven segments
-  aig   0–20    =  21 chars
-  p     20–30   =  11 chars
-  aig   30–90   =  61 chars
-  aimh  90–120  =  31 chars
-  aig   120–200 =  81 chars
-  aimh  200–250 =  51 chars
-  aig   250–500 = 251 chars
+```text
+outer envelope
+├── ev: 1
+├── manifest
+│   └── content_signed_at
+└── signed_at
+```
 
-  Total characters:             507  (offsets inclusive)
-  AI-generated (aig):           414 chars = 81.66%
-  AI-modified human (aimh):      82 chars = 16.17%
-  Human (p):                     11 chars =  2.17%
+- `ev: 1` is a direct authenticated outer-envelope field. It selects the
+  current envelope contract and does not require `FIELD_MAP.ev`.
+- `content_signed_at` is inside the manifest and means the generating source's
+  content-record signing or commitment time.
+- Outer `signed_at` means when LPS signed the complete envelope.
+- Both timestamps are authenticated. An inner `signed_at` is invalid.
+- Missing, invalid, or unsupported `ev` yields `unsupported_version`; no
+  default, legacy inference, or version remapping is allowed.
 
-  Fallback confidence for an aig segment  = floor(81.66) = 81
-  Fallback confidence for an aimh segment = floor(16.17) = 16
-  Fallback confidence for a p segment     = floor(2.17)  =  2
+### Text-binding contract
 
-### Important constraint
-Mathematical fallback confidence is a structural approximation,
-not a forensic measurement. It reflects document-level character
-distribution, not signal strength for any individual segment.
-The manifest must record that fallback was used so a verifier
-knows the confidence value was not supplied by the generating tool.
+The signer and verifier must apply the same sequence:
 
-### Fallback flag — confidence_source
-Every segment in the output manifest carries a confidence_source
-field recording how its confidence value was produced.
+```text
+visible text
+→ strip trailing U+000D, U+000A, U+0020
+→ UTF-8 bytes
+→ SHA-256 text_hash and byte text_length
+```
 
-  confidence_source: "tool"     — supplied directly by the
-                                  generating AI tool.
-  confidence_source: "derived"  — supplied by a classifier or
-                                  human reviewer.
-  confidence_source: "fallback" — calculated by mathematical
-                                  derivation defined in 1.2.
-
-This field survives compression, embedding, and verification
-intact. A verifier must surface it alongside the confidence
-value so the distinction is never hidden from the reader.
-
-### Shortcode — section 4.1 addition required
-confidence_source is a new manifest field not present in the
-v0.1 shortcode dictionary. Add the following entry to section 4.1
-before implementing:
-
-  csrc = confidence_source
-
-### Code changes required
-generateManifest() in manifestGenerator.mjs must be updated to:
-1. Accept optional confidence per segment.
-2. Detect absence of confidence and run the fallback calculation.
-3. Write confidence_source on every segment in the output.
-The fallback calculation runs after all segments are mapped,
-using the totalCharCount, aiCharCount, and humanCharCount
-values already computed for proportion calculation.
-
-
-
-Open question: how does the tool know segment boundaries?
-Approach 1 — provided by the AI tool at creation time [PREFERRED]
-Approach 2 — estimated post-hoc by detection layer [FALLBACK]
-
----
-
-## 2. Manifest Schema [DEFINED]
-Defined in README.md section 3.2 of the proposal repository.
-Reference: https://github.com/systemacticco-rgb/linguistic-provenance-schema#32-what-lps-records
-Do not duplicate the schema here.
-Any schema changes must be made in the proposal repository first,
-then reflected in this implementation.
-
-## 2.1 Component Understanding — Read Before Building
-
-### What are the three origin types and what does each mean?
-Human: written entirely by a human, no AI involvement at any stage.
-AI generated: written entirely by an AI tool, no human wrote
-the original text.
-AI modified human: a human wrote it first, then an AI edited,
-rewrote, or transformed it. Both were involved. The modification
-degree field records how much the AI changed it — 0.1 means barely
-touched, 0.9 means almost completely rewritten.
-
-### What is a segment and what two pieces of information define
-its boundaries?
-A segment is one contiguous section of the text with a single
-origin type. It is described in the manifest by two coordinates
-— start_offset and end_offset — which are character position
-numbers pointing into the visible text. Start offset is the
-position of the first character of that section. End offset is
-the position of the last character. The text itself is untouched.
-The manifest holds the map.
-
-### What is the confidence field and what does 0.95 mean vs 0.60?
-The confidence field records how certain the system is about
-the origin classification assigned to that segment. 0.95 means
-95% confident — the signal was clear, the classification is
-strong. 0.60 means 60% confident — the signal was weak or
-ambiguous. For forensic contexts this matters significantly.
-A judge treats a segment classified as AI generated at 0.95
-differently from the same classification at 0.60.
-
-### What is overall_ai_proportion and where does it come from?
-The percentage of total content touched by AI in any way —
-either fully generated or modified. Calculated from segment
-boundaries: sum of characters in AI generated and AI modified
-human segments divided by total characters in the document.
-human_proportion is the inverse. Both are calculated automatically
-by the manifest generator from the segment data. They always
-add up to 1.0.
-
-### What does the manifest generator receive as input and
-what does it produce as output?
-Input: a list of segments each with start offset, end offset,
-origin type, AI tool identifier if relevant, modification degree
-if relevant, and confidence value. Plus signing tool name and
-timestamp.
-Output: one JSON object — the manifest — structured exactly
-according to the schema in README.md section 3.2.
-It does not sign anything. It does not embed anything.
-One job: structured input in, structured JSON out.
-
-### Where is the schema definition to follow before writing
-any code?
-README.md section 3.2 in the proposal repository:
-https://github.com/systemacticco-rgb/linguistic-provenance-schema
-#32-what-lps-records
-Schema changes happen in README.md first.
-SPEC.md and code follow. README.md is the authority.
-
-### What does the signing layer do to the manifest?
-The manifest generator produces a JSON object. It is plain
-readable text with no protection — anyone could open it and
-change a value. The signing layer seals it. It takes the manifest
-JSON, converts it to bytes, and passes it through ECDSA P-256
-using your private key. The output is a signature — a unique
-string that could only have been produced by combining that exact
-manifest with that exact private key. Change one byte in the
-manifest after signing and the signature no longer matches.
-Verification fails. The signing layer never touches the visible
-text. It only touches the manifest.
-
-### What are the two keys and what does each one do?
-Private key: signs the manifest. Only you have it. Never committed
-to GitHub. Never logged. Lives in .env file locally and in Vercel
-environment variables for deployment. Generated once using OpenSSL.
-Public certificate: verifies the signature. Anyone can have it.
-Committed to the repo. A verifier uses it to confirm the signature
-is valid without ever needing access to the private key.
-Two separate jobs. Two separate files. One never leaves your
-machine. The other is public by design.
-
-### What is the order of operations across all four components?
-1. Manifest generator produces JSON manifest from segment data.
-2. Signing layer signs that JSON using private key —
-   produces signed manifest.
-3. Embedding layer takes signed manifest and embeds it into
-   the text as invisible Unicode variation selectors.
-4. Verification tool extracts manifest from text, checks
-   signature against public certificate, renders breakdown.
-The text and the manifest are two separate things throughout.
-The signing layer sits between the manifest generator and the
-embedding layer. It seals the manifest before it enters the text.
+`text_hash` and `text_length` derive from the same canonical bytes and both
+are checked. `text_length` is a byte length, not a character count and not
+merely a failed-state disclosure value.
 
 ---
 
 ## 3. Signing Layer [SECURITY-CRITICAL]
-Algorithm: es256 (ECDSA P-256, SHA-256, raw r‖s signature encoding)
+
+The audited reference path validates a signed envelope, configured allowed HTTPS
+certificate retrieval, and visible-text tamper detection. It does not establish
+a final production cryptographic profile, certificate-trust governance, or
+COSE, JOSE, C2PA, or other interoperability profile. The following is a
+reference-implementation mechanism, not a standards-conformance claim.
+
+Algorithm: es256 (internal LPS label for ECDSA P-256, SHA-256, raw r‖s)
 Library: Node.js built-in crypto module (no install required)
 Signature encoding: IEEE P1363 (raw r‖s, 64 bytes fixed for P-256).
-  Required because the JOSE/COSE "ES256" identifier specifies
-  raw r‖s encoding, not DER. Node's default sign()/verify()
-  output is DER — must explicitly pass
+  The JOSE identifier "ES256" uses raw r‖s bytes; COSE identifies
+  the related primitive as algorithm -7. The LPS string es256 is neither
+  of those standard identifiers and does not create a JOSE or COSE envelope.
+  Node's default sign()/verify() output is DER — must explicitly pass
   { key, dsaEncoding: 'ieee-p1363' } to both createSign().sign()
-  and createVerify().verify() calls. Confirmed June 30 2026:
-  internal round-trip (testSigning.mjs, testVerification.mjs)
-  and external cross-check against the independent panva/jose
-  library both pass. The primitive signature encoding produced by
-  signingLayer.mjs matches ES256's raw r‖s expectation. LPS does
-  not currently emit JWS or COSE_Sign1 envelopes, so full
-  envelope-level JOSE/COSE interoperability remains unimplemented.
-Note: @contentauth/c2pa-node is used in component 3 (embedding
-      layer) only, not for signing. Signing uses native crypto
-      exclusively.
-Note: original c2pa-node deprecated September 2025 — do not use.
+  and createVerify().verify() calls. This implementation detail does not
+  establish independent primitive, JWS, COSE, or envelope interoperability.
+Note: c2pa-text is used in component 3 (embedding layer) only,
+      not for signing. Signing uses native crypto exclusively.
+      @contentauth/c2pa-node is listed in package.json but is
+      not imported by the embedding layer directly.
+Note: use @contentauth/c2pa-node only for the embedding layer.
+      Do not use the original c2pa-node package.
 Key format: PEM
 Certificate generation commands:
 [UPDATED — 2026-07-06] Canonical key generation — named-curve PKCS#8.
@@ -294,14 +182,13 @@ private.pem with the public key inside cert.pem before signing. If they
 do not match, signing must fail closed with:
 Signing material mismatch: private.pem does not match cert.pem
 
-Certificate delivery — v0.1:
+Certificate delivery — audited reference scope:
 cert.pem is not embedded in the manifest. It is hosted publicly at:
 https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem
 The manifest carries two fields instead:
-cert_url — the public URL of the certificate. Locked to production
-HTTPS URL as of 2026-07-08. The file:// local path was a testing
-placeholder and was never appropriate as a permanent value.
-See CHANGELOG.md 2026-07-08 entry. [BUILT — 2026-07-08]
+cert_url — the configured allowed HTTPS retrieval route. The audited verifier
+confirms this route, certificate fingerprint comparison, and signature
+verification; it does not establish production certificate governance.
 cert_fingerprint — SHA-256 hash of the certificate content.
 The verification tool fetches the certificate, computes a SHA-256 hash of its DER-encoded bytes (X509Certificate.raw — not the PEM string), confirms it matches cert_fingerprint, then uses it to verify the signature. The signing layer computes cert_fingerprint the same way at sign time. Both sides must use DER bytes or the comparison is sensitive to PEM text encoding differences across platforms and network responses.
 Repo: systemacticco-rgb/lps-certificates (public)
@@ -323,40 +210,37 @@ Constraints:
   prevents the local pipeline from producing manifests signed by one key
   while advertising an unrelated certificate.
 
-  Why not @contentauth/c2pa-node for signing:
+Why not a C2PA media library for signing:
 @contentauth/c2pa-node is designed to sign media files — images,
 video, audio. It embeds C2PA manifests into binary media containers.
-LPS signs JSON text manifests, not media files. The library cannot
-sign arbitrary JSON without a media file wrapper. Node.js built-in
+LPS signs JSON text manifests, not media files. Node.js built-in
 crypto signs any data format directly. No external dependency,
 no binary compatibility risk, no version management required.
-@contentauth/c2pa-node is used in component 3 (embedding layer)
-only. Signing and embedding are separate concerns using separate
-tools.
+The embedding layer uses c2pa-text, a separate package handling
+Unicode variation selector embedding for plain text. Signing and
+embedding are separate concerns using separate tools.
 
-HMAC key derivation for anchor manifests: [PLANNED — pending key
-hierarchy lock]
-HKDF-SHA256 confirmed as the primitive, replacing the earlier
-createSign-based draft shown in prior versions of this section —
-see PROPOSAL 005 "HMAC key derivation." Derived using Node's
-built-in crypto.hkdfSync('sha256', ikm, salt, info, 32). No
-external dependencies. Consistent with no-external-crypto
-constraint. ikm, salt, and info are NOT YET DEFINED — locked
-together as one decision covering root keying material, whether
-anchor keys derive from the signing key or a separate master
-secret, and how future keys (registry, token, rotation) extend
-the hierarchy without rework. This section is rewritten once with
-final values once that decision locks, then treated as immutable —
-same rule as the shortcode dictionary.
+HMAC/HKDF are not part of the audited current cryptographic profile. Any
+future HMAC/HKDF design requires separate versioning, key hierarchy, key
+identifiers, derivation parameters, storage, rotation, access policy, and
+verification semantics. None of those production decisions is established
+here.
 
 ---
 
-## 4. Embedding Layer [DEFINED — infrastructure exists]
+## 4. Embedding Layer [BUILT — 2026-06-19]
 Library: encypherai/c2pa-text (MIT licensed)
-Method for v0.1: Unstructured A.8 — Unicode Variation Selectors
-Reason: survives copy-paste, sufficient for proof of concept
+Method for v0.1: LPS selector carrier — legacy internal label A.8
+Reason: [PENDING CROSS-CHECK] scoped copy/paste observations support
+research use; transport preservation is not universal
 Constraint: embedding and extraction are separate functions
 Constraint: never modify content during embedding
+
+[STANDARDS BOUNDARY] This component uses selector-carrier operations, but the
+LPS output is not a C2PA A.8 wrapper. The documented v0.1 output lacks the
+C2PA Manifest Store/JUMBF and C2PA COSE_Sign1_Tagged claim signature required
+for that claim. PRE-3 must independently establish any statement about the
+package's own C2PA behavior; package use does not establish LPS conformance.
 
 Extraction output format: object with properties manifest (Uint8Array),
 cleanText (string), offset (number), length (number).
@@ -366,47 +250,65 @@ Known limitation: larger manifests create longer invisible wrapper
 sequences, which may reduce editor survival in practice. This is an
 operational survival constraint, not an embedding-layer fallback trigger.
 Capacity threshold: [DEFINED — June 2026]
-First data point — component 0:
-5-byte manifest occupies 26 Unicode characters after 37 visible characters.
 
-Production measurement — 5-segment manifest after full compression pipeline:
+[PENDING CROSS-CHECK] Five-segment reference measurement after full compression pipeline:
 Raw JSON with certificate:              2026 bytes
 After certificate removal:              1219 bytes
 After shortcode compression:             843 bytes
 After CBOR encoding:                     737 bytes
 Former assumed ceiling:                  256 bytes
 
-Conclusion: the previous 256-byte ceiling assumption does not apply to
-the `c2pa-text` A.8 wrapper implementation. Complex manifests remain
-testable through A.8, but produce longer invisible payloads and need
-manual survival data from target editors.
-Remaining optimization target: cert_url shortcode registry — drops
-78-byte URL to 3-4 bytes. Reserved for v0.2.
+[PENDING CROSS-CHECK] The c2pa-text selector operation can produce longer
+invisible payloads for larger LPS manifests. Production limits depend on
+external editor latency, platform reclassification, token overhead, and
+transport preservation; the reference implementation does not establish a
+production deployment claim.
 
-Structured A.9 compatibility path:
-The current v0.1 plain-text carrier is A.8 invisible Unicode variation selectors. Any structured visible-text carrier is not part of the v0.1 pipeline and must not be treated as a fallback.
+The current v0.1 plain-text carrier is an LPS selector carrier. Any
+structured visible-text carrier is outside the v0.1 pipeline and must not be
+treated as a fallback. The legacy A.8 extraction label is the only
+implementation route currently exposed. C2PA describes its selected variation
+selectors as valid and visually non-rendering, so no generic Unicode
+non-conformance is asserted. The relevant limitation is that LPS does not
+emit the C2PA A.8/JUMBF/COSE structure; this says nothing about the validity
+of LPS's cryptographic primitive.
 
-Detection: verificationTool.mjs uses A.8 extraction via extractManifest(). No structured visible-text fallback path is part of the v0.1 verifier. The verification result reports embedding_method_used as A.8.
-
-Redundant embedding — PROPOSAL 005 — post-v0.1
-One complete full manifest copy embedded per paragraph via A.8R,
-an A.8-derived redundant invisible variation-selector chunk carrier.
-A.8R is not C2PA Text A.9; A.9 remains a structured visible-text
-compatibility path only. A.8R copies overlap by 25% of chunk range.
-Cross-copy reconstruction via seq number grouping. See PROPOSAL 005
-for full architecture.
-Two new verification states defined: anchor_only, partial_recovery.
+[DEFERRED] Redundant embedding — PROPOSAL 005/A.8R — is post-feedback
+research, not an independent system or C2PA Text A.9. No implementation or
+pre-submission revision is authorized before working-group feedback. Its
+paragraph copies, overlap, and reconstruction notes do not establish
+transport survival or C2PA conformance.
+Two new verification states defined for PROPOSAL 005:
+[DEFINED — PROPOSAL 005] anchor_only and
+[DEFINED — PROPOSAL 005] partial_recovery.
 Chunk header format: seq uint16 + total uint16 + copy_id uint8
 + version uint8 = 6 bytes prepended to each A.8R chunk payload.
 
+[HOLD] A.8R arbitrary-position embedding is a selector-wrapper research
+direction: visible text would be split, an existing LPS selector operation
+applied to the prefix, and the suffix rejoined. It remains
+unimplemented and does not establish third-party interoperability or a
+verifier contract. The details remain pending PROPOSAL 005 scope
+confirmation.
+
+[HOLD] Any future A.8R carrier specification would need an explicit
+placement and verifier contract. No arbitrary-position or third-party
+verifier rule is locked by v0.1.
+
+[OPEN-7 — 2026-07-09] Overwrite and re-signing contract undefined. When an AI tool receives text already carrying a valid LPS manifest and produces modified output, no defined contract exists for: (a) whether the output must carry a new manifest referencing the prior one as a provenance chain, (b) whether manifest bytes surviving in the output must be stripped before re-signing, (c) whether a verifier encountering a physically present but semantically invalid manifest from a prior signing cycle must surface this condition explicitly. No resolution adopted. This must be defined before any AI tool integration guidance is published.
+
 ---
 
-## 4.1 Manifest Compression — Shortcode Dictionary [DEFINED — v0.1]
+## 4.1 Manifest Compression — Shortcode Dictionary [BUILT — 2026-07-03]
 
 All field names and origin values are shortened before embedding.
 The verification tool expands them using this dictionary.
 Dictionary is versioned and immutable — existing codes never change.
 New codes may be added in future versions only.
+
+`ev` is not a dictionary field: it remains the direct authenticated outer
+envelope version field. The dictionary must not add `FIELD_MAP.ev` or use a
+shortcode/default rule to infer a missing `ev`.
 
 ### Field name codes — v0.1
 lv   = lps_version
@@ -423,7 +325,7 @@ md   = modification_degree
 oaip = overall_ai_proportion
 hp   = human_proportion
 st   = signing_tool
-sa   = signed_at
+sa   = signed_at (outer envelope)
 m    = manifest
 sig  = signature
 cu   = cert_url
@@ -432,7 +334,7 @@ csrc = confidence_source
 alg  = algorithm
 
 ### Algorithm field value convention [DEFINED — June 30 2026]
-The `algorithm` field (shortcode `alg`) uses the internal string value `es256` to label the cryptographic primitive used in signing: ECDSA over the P-256 curve with `SHA-256` using `IEEE P1363` `r‖s` encoding. This is an LPS-internal naming convention and does not represent a `COSE` or `JOSE` algorithm identifier. In `COSE`, the equivalent algorithm is identified as `ES256` with integer value -7; in JOSE, the equivalent identifier is the string `"ES256"`. LPS does not currently implement either `COSE` or `JOSE` envelope formats, and therefore does not use their identifiers directly in the manifest structure. Future envelope-level interoperability `(COSE_Sign1 / JWS)` may adopt the standard identifiers directly (see Section 9).
+The `algorithm` field (shortcode `alg`) uses the internal string value `es256` to label the cryptographic primitive used in signing: ECDSA over the P-256 curve with `SHA-256` using `IEEE P1363` `r‖s` encoding. This is an LPS-internal naming convention and does not represent a `COSE` or `JOSE` algorithm identifier. In `COSE`, the equivalent algorithm is identified as `ES256` with integer value -7; in JOSE, the equivalent identifier is the string `"ES256"`. LPS does not currently implement either `COSE` or `JOSE` envelope format, and this specification defines no envelope-level interoperability profile.
 
 ### Origin value codes — v0.1
 h    = human
@@ -442,495 +344,220 @@ aimh = ai_modified_human
 ### Version identifier codes — v0.1
 lps-v0.1 = lps-reference-implementation-v0.1
 
-### Default field assumption [DEFINED]
-lv and st are omitted at embed time in v0.1.
-Verification tool assumes lps-v0.1 defaults if absent.
-If non-default values are present they override the assumption.
-This rule is a schema contract — both embedder and verifier must
-implement it. Defined in README.md section 3.2 as authoritative.
+### Version handling [CURRENT AUDITED CONTRACT]
+`ev` is mandatory for the current envelope. It cannot be defaulted, inferred,
+or replaced by an `lps_version` shorthand. Missing, invalid, or unsupported
+`ev` returns `unsupported_version` before cryptographic verification.
 
 ### Confidence encoding [DEFINED]
 Confidence stored as integer 0-100, not float 0.0-1.0.
-Example: 0.95 stored as 95. Verification tool divides by 100
-on extraction for display purposes.
-Defined in README.md section 3.2 as authoritative.
+Example: 0.95 stored as 95. Division by 100 on extraction
+for display is specified but not implemented in v0.1 —
+verificationTool.mjs returns raw integers. Consumers should
+expect integers in the range 0-100 from the current
+implementation.
+The normative confidence contract is defined in this section, not in a README.
 
-### v0.2 optimization — CBOR binary encoding [PLANNED]
+### CBOR binary encoding [BUILT — 2026-06-20]
 JSON serialization replaced with CBOR binary format.
 Drops quotes from keys, encodes numbers as binary not text digits.
 Estimated additional saving: 50-70% reduction in numeric field size.
-Do not implement until shortcode dictionary is tested in v0.1.
-Requires verification tool update to deserialize CBOR on extraction.
-Status note: this optimization has not been implemented and
-must not be assumed by any component until both serialization
-and verification paths are updated together.
+Before decoder output is accepted for version routing, the verifier rejects
+duplicate top-level envelope keys. A duplicate is
+`invalid_envelope / noncanonical_encoding / present` and must not trigger
+certificate retrieval, registry access, or fallback.
+
+This implemented encoding path is not a complete normative canonical-CBOR
+profile. Canonical-CBOR rules and decoder resource bounds remain deferred.
+
+---
+## 4.2 Scoped carrier observations [PENDING CROSS-CHECK]
+
+[PENDING CROSS-CHECK] The candidate 3–10-segment range of 400–1,500
+compressed bytes and its associated invisible-character counts are
+scoped observations, not a production safe-operating guarantee.
+
+[PENDING CROSS-CHECK] Latency and reclassification observations are
+editor- and platform-specific. They do not establish a protocol limit,
+universal carrier preservation, or a production throughput claim.
+
+[PENDING CROSS-CHECK] AI compose-input reclassification, renderer
+behaviour, and transport preservation are external platform
+dependencies. No production ceiling is locked.
+
+Token overhead: text carrying large invisible Unicode payloads incurs increased token consumption when processed by any language model. Variation selectors are not collapsed by tokenizers — each character consumes token budget. Integrations passing LPS-embedded text to language model APIs must account for this overhead. This must be stated explicitly in integration documentation before any production deployment guidance is published.
+
+[PENDING CROSS-CHECK / LIMITATION] LPS manifests must not be embedded
+inside code syntax blocks in v0.1. Code renderers may display invisible
+Unicode characters as visible markers. GitHub file-level preservation
+is scoped evidence, not a universal claim. The constraint applies to
+inline and fenced code blocks only, not to file-level code assets.
+
+[LIMITATION] LPS has no defined carrier or segment role for AI-generated
+code in code-block environments. Inline code-block embedding is outside
+v0.1 scope; no carrier mechanism for code blocks is defined.
 
 ---
 
-## 5. Verification Tool [DEFINED — commit 4 files, June 19 2026]
-Input: file or text string with embedded manifest
-Steps in order:
-1. Extract manifest from content
-2. Check signature against public key
-3. Check certificate validity
-4. Strip trailing /[\r\n ]+$/ from extracted clean text, then hash
-   the stripped result and compare against text_hash in manifest.
-   The same strip is applied at signing time in manifestGenerator.mjs
-   before text_hash and text_length are computed. Both sides must
-   apply the strip identically or the hash comparison is meaningless.
-   If mismatch after strip: return failed with reason.
-5. Render contribution breakdown.
+## 5. Verification Tool [CURRENT AUDITED CONTRACT]
 
-Output — verified: signal intact, signature valid, text hash matches.
-  Returns: status, signed_at, algorithm, overall_ai_proportion,
-  human_proportion, segments array with full breakdown.
+The verifier must not modify its input. It processes it in this order:
 
-Output — failed: signal found but signature invalid, or visible
-  text hash does not match. Returns: status, reason, signed_at,
-  algorithm.
+1. Classify the carrier as valid/parseable, absent, corrupted, or unparseable.
+2. For a decoded envelope, reject duplicate top-level keys before version
+   routing or external I/O.
+3. For a valid, parseable carrier, validate `ev` and the envelope before
+   certificate retrieval and cryptographic verification.
+4. For a structurally valid supported envelope, use the configured allowed
+   HTTPS certificate route, verify the certificate fingerprint and signature,
+   then verify the canonical text hash and byte length.
+5. Only for an absent, corrupted, or unparseable carrier, compute the canonical
+   visible-text hash and perform exact-hash registry recovery.
 
-Output — degraded: signal absent or corrupted. Returns: status,
-  reason, anti_forensic_note.
+### Result contract
 
-Output — registry_required: signal absent, registry lookup
-  succeeded. Returns: status, reason, registry_record with
-  token, content_hash, generating_id, created_at.
-  Implemented in v0.1 stub — registryClient.mjs.
-  Full production architecture: PROPOSALS.md PROPOSAL 001.
+`status` is mutually exclusive. `reason_code` is a stable machine-readable
+cause; `carrier_condition` records the carrier boundary state.
 
-Constraint: verification never modifies the input
-Constraint: certificate revocation checking is part of the
-intended production verification architecture. The current
-reference implementation does not yet implement revocation
-checking and must not imply that this capability already exists.
+| Status | Current reason behavior | Carrier condition |
+|---|---|---|
+| `verified` | No failure reason | `present` |
+| `unsupported_version` | `missing_ev`, `invalid_ev`, or `unsupported_ev`, as applicable | `present` |
+| `invalid_envelope` | `noncanonical_encoding` for a duplicate top-level key; `invalid_schema` for a parseable schema-invalid envelope; `malformed_envelope` for another parseable structural failure | `present` |
+| `failed` | `signature_invalid`, `text_hash_mismatch`, or `text_length_mismatch`, as applicable | `present` |
+| `registry_required` | `registry_match` | `absent`, `corrupted`, or `unparseable` |
+| `degraded` | `registry_no_match`, `registry_unavailable`, or `registry_response_invalid` | `absent`, `corrupted`, or `unparseable` |
 
-The verification outputs below are architectural definitions
-specified for PROPOSAL 005. They describe the intended
-verification model but are not produced by the current v0.1
-reference implementation. Their implementation status remains
-Defined until the corresponding components are built,
-integrated, and verified.
+The carrier-condition terms mean:
 
-Output — anchor_only: no full manifest recoverable, anchor
-  manifests present. Returns: text_hash, overall_ai_proportion,
-  human_proportion, algorithm, signed_at. No segment breakdown.
-  No signature verification.
+```text
+present     = a carrier and parseable envelope reached normal validation
+absent      = no carrier was found
+corrupted   = a carrier payload was damaged or incomplete
+unparseable = carrier payload was recovered but cannot decode as an LPS envelope
+```
 
-Output — partial_recovery: manifest partially reconstructed
-  from cross-copy surviving chunks. Returns: reconstructed
-  fields, missing seq positions list, reconstruction map.
-  Signature verification did not run.
+`invalid_envelope` is never eligible for registry fallback. A registry match
+corroborates only an exact canonical-text hash with a record; it does not
+restore segment evidence, establish why a carrier is unavailable, authenticate
+an issuer, or turn the result into `verified`.
 
-Output — injection_detected: conflicting certificates found
-  across chunk assemblies. Returns session certificate
-  fingerprint and injected certificate fingerprint.
-
-Output — anchor_only: updated to note anchor HMAC validation
-  required before anchor fields are trusted. Anchors failing
-  HMAC are discarded before fallback decision.
-
-  anchor_layer: present | absent | conflict
-
-Output — injection_detected: valid chunks found from multiple
-  certificate sources during reconstruction. Session certificate
-  anchor established from first valid assembly. Subsequent
-  assembly produced different cert_url or cert_fingerprint.
-  Returns: status, session_cert_fingerprint,
-  injected_cert_fingerprint, signed_at from session manifest.
-  Forensic value: active adversarial injection attempt recorded
-  with both certificate fingerprints as evidence.
-
-[BUILT — v0.1] original_manifest disclosure in the failed state
-is gated by a length-mismatch threshold, locked at 10% of
-text_length. verificationTool.mjs STEP 4 computes the absolute
-difference between the stripped received text's length and the
-manifest's text_length field; if that difference exceeds 10% of
-text_length, original_manifest is withheld and the failed response
-returns only status, reason, signed_at, and algorithm. This prevents
-an adversary from using extreme-mismatch replay to study document
-structure via repeated submissions. text_length is a plain
-manifest field, protected by the same signature that covers the
-whole manifest — it requires no separate HMAC or hash of its own.
-Note: text_length in the manifest reflects the stripped text length,
-not the raw input length. The strip is applied before text_length
-is computed in manifestGenerator.mjs.
+Certificate issuer trust, revocation, rotation, lifecycle governance, and
+production credential policy are outside this verification contract.
 ---
 
-## 6. Server-Side Record Store [PARTIALLY IMPLEMENTED]
+## 6. Registry recovery [CURRENT AUDITED CONTRACT]
 
-Architecture defined in PROPOSALS.md PROPOSAL 001.
+The Supabase-backed registry is an exact canonical-text-hash recovery
+mechanism. It is consulted only after an absent, corrupted, or unparseable
+carrier—not for normal valid-carrier verification.
 
-A functional registry stub exists in the v0.1 reference
-implementation (registryClient.mjs), providing registration
-and lookup by token and content hash for demonstration and
-testing purposes.
+The registry response boundary is part of the contract:
 
-The full production architecture—including trust-list
-governance, credential management, certificate lifecycle,
-identity binding, rate limiting, and operational deployment—
-remains future work and is outside the current reference
-implementation.
+```text
+exact record       → registry_required / registry_match
+no matching record → degraded / registry_no_match
+transport/HTTP     → degraded / registry_unavailable
+malformed/incomplete response
+                   → degraded / registry_response_invalid
+```
 
-### What it is
-An append-only server-side log. Every AI-generated output gets
-a hash plus timestamp written at generation time. Content is
-not stored — only the fingerprint. A presented document can
-be checked against this log to confirm it existed, unchanged,
-at a specific moment.
+The implementation validates recovery responses before using them. A match
+corroborates an exact canonical-text hash with a record and nothing more: it
+does not restore span-level evidence, prove carrier removal, establish
+authorship or provider origin, or serve as issuer authentication.
 
-### Access model
-Tiered read access. Not public. Read access requires
-credentialed authority — legal, governmental, or institutional.
-Consumer layer has no access. This is intentional.
+`generating_id` has minimal safety validation only. This specification does
+not define its identity, authorization, provider, issuer, or trust semantics.
 
-### Forensic value
-The only verification layer that survives transcription,
-screenshot, and signal stripping. Not proof of authorship.
-Corroborating forensic evidence for legal proceedings.
-
-### Why it is deferred
-Hash must be written at generation time, server-side, by the
-model provider. Cannot be retrofitted by a third party.
-Google, Anthropic, OpenAI, Meta must integrate this at the
-generation layer. Adoption requires regulatory mandate or
-voluntary commitment from providers.
-
-### Architecture decision pending
-Foundation-hosted vs federated registry.
-PROPOSAL 002 — token binding — shares this infrastructure.
-Decision deferred to working group engagement phase.
-
-### v0.1 scope
-Stub implemented — June 21 2026.
-Two Supabase tables: registry_records and usage_events.
-registryClient.mjs: registerContent() and queryRegistry().
-verificationTool.mjs: registry_required state wired to
-queryRegistry() via content hash fallback.
-RLS disabled in stub — service role key is the access boundary.
-RLS policies and credentialed access layer deferred to
-production deployment phase.
-
-### Connects to
-PROPOSAL 001 — Notarization Registry
-PROPOSAL 002 — Server-Side Token Binding
-RESEARCH 002 — Legal Framework for Cross-Registry Access
-
-### Input validation constraints — v0.1
-Applied in registerContent() before any Supabase insert runs.
-
-- content_hash must be exactly 64 lowercase hex characters.
-  Reject anything else with a thrown error before insert.
-  generateManifest() already produces this format —
-  this is a defence-in-depth measure not a format conversion.
-- generating_id: a minimal safety-only check runs before insert —
-  non-empty, printable ASCII (0x20-0x7E), 1-128 characters, no
-  control characters. This is NOT format validation in the sense
-  of enforcing an identity/version schema. The actual structural
-  format (opaque token vs. structured identifier, how identity and
-  version are represented) is intentionally undecided. This
-  safety-only check is expected to be superseded once that design
-  question resolves — most likely informed by working group
-  feedback rather than decided unilaterally beforehand. Do not
-  tighten this into a structured pattern without a full design
-  pass. See Section 9 for the open schema question this defers to.
-- Rate limit: maximum registrations per generating_id per hour.
-  Reject inserts exceeding the limit with a thrown error.
-  Threshold open — see Section 9.
-- All three controls applied before Supabase insert runs.
-  Supabase is never called on invalid input.
+Registry SLOs, monitoring, retry policy, incident response, rollback,
+credential isolation, access governance, retention, and identity policy are
+production-only follow-ups. No such operational behavior is established by the
+audited reference implementation.
 ---
 
 ## 7. Security Constraints — Global [SECURITY-CRITICAL]
-These apply to every component without exception:
 
-- No cryptographic algorithm implemented from scratch
-- No key material in logs, console output, or error messages
-- No mixed concerns — each file has one job
-- All dependencies pinned to specific versions
-[NOTE — 2026-07-05] "Pinned" currently means lockfile-enforced
-  (package-lock.json resolves every dependency, including cbor, to
-  one exact version with an integrity hash), not package.json
-  version-string pinning (package.json still uses caret ranges).
-  This distinction matters specifically for cbor: canonical byte
-  output from compression.mjs's canonicalBytes() must stay
-  bit-identical for a given manifest forever, or old signatures stop
-  verifying. See SECURITY_MODEL.md "Security assumptions" for the
-  full risk and why the obvious fixes (freeze the encoder vs. tag the
-  manifest with an encoder version) are both currently deferred.
-- All dependencies checked against known vulnerability databases
-  before use
-- Certificate revocation checking is mandatory
-- Input validation on every entry point
-- Error messages must not leak internal state
-- HMAC comparison must use crypto.timingSafeEqual() —
-  never standard equality. Applies to all HMAC verification
-  operations in the codebase without exception.
-- Derived HMAC key material is sensitive. Never logged,
-  never returned in error messages, never stored. Same
-  handling rules as private key material.
-- Magic prefix secondary validation mandatory — type field
-  must be 0 or 1, version must be 1, total must be greater
-  than 0. Buffers failing secondary checks discarded
-  without further parsing.
-- Injection volume cap applied before reconstruction begins.
-  Cap formula open — see Section 9.
+- Do not implement cryptographic primitives from scratch or expose key material
+  in logs, errors, or client-accessible configuration.
+- Treat the visible text, carrier, decoded envelope, certificate response, and
+  registry response as untrusted until the applicable validation boundary
+  completes.
+- Reject duplicate top-level envelope keys before version routing or any
+  external I/O. Do not use registry recovery for a parseable invalid envelope.
+- Do not represent certificate fingerprint and signature verification as issuer
+  authorization, certificate revocation checking, or certificate governance.
+- Treat test-only keys and dotenv use as test evidence only; they do not
+  establish production key custody, credential isolation, or credential policy.
+- Do not represent a registry record as provider-origin authentication,
+  authorized-issuer verification, or a substitute for a valid carrier.
+- HMAC/HKDF, a complete canonical-CBOR profile, decoder resource bounds, and
+  broader cryptographic-profile choices remain deferred.
 ---
 
-## 8. Test Requirements [DEFINED — v0.1 complete]
-Each component has a dedicated test file.
-All tests pass as of June 20 2026.
+## 8. Validation evidence [CURRENT AUDITED SCOPE]
 
-### Test files
-testManifest.mjs — Component 1
-  Confirms: manifest structure, text_hash field present,
-  three origin types correct, proportions calculated,
-  all fields match schema in README.md section 3.2.
+The audit confirms assertion-backed integration, manifest, embedding,
+confidence, signing, and verification coverage. `adrIntegration.test.mjs`
+completed 12 assertion-backed checks for the locked envelope, registry,
+malformed-carrier, and failure contracts. The stale confidence, signing, and
+verification tests were corrected and are assertion-backed.
 
-testSigning.mjs — Component 2
-  Confirms: signed manifest object structure, signature
-  present, cert_url and cert_fingerprint present,
-  algorithm correct, signed_at timestamp present.
+Runtime evidence also confirms:
 
-testEmbedding.mjs — Component 3
-  Confirms: visible text unchanged after embedding,
-  manifest bytes extractable, manifest recoverable
-  from CBOR bytes after decompression.
+- an allowed HTTPS certificate retrieval path with fingerprint and signature
+  verification;
+- visible-text tamper detection returning `text_hash_mismatch`;
+- read-only live exact-match registry recovery; and
+- read-only live no-match registry recovery.
 
-testVerification.mjs — Component 4
-  Confirms: verified state on clean text, failed state
-  on tampered text, original_manifest returned on
-  text hash mismatch. Local test mode may allow the repository
-  cert.pem file URL explicitly so local survival testing does not
-  depend on public certificate fetches.
+This is implementation evidence only. It does not establish C2PA, SynthID,
+COSE, JOSE, certificate-governance, provider, issuer, production operations,
+or deployment conformance. [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md)
+owns the evidence-oriented summary and limitations.
 
-testRegistry.mjs — registryClient.mjs
-  Confirms: registerContent() generates correct token format,
-  queryRegistry() by token returns correct record,
-  queryRegistry() by content hash returns correct record,
-  unknown token returns null, missing arguments throws error.
+## 9. Historical and proposal references [NON-NORMATIVE]
 
-testRegistryVerification.mjs — registry_required state
-  Confirms: registry_required state fires when text has no
-  embedded signal but content hash exists in registry,
-  degraded state fires when text has no signal and no
-  registry record.
+Sections 1–8 define the current audited contract. Historical change and review
+records are maintained in [`CHANGELOG.md`](CHANGELOG.md), and current audit
+evidence is maintained in [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md).
 
-testConfidenceFallback.mjs — confidenceFallback.mjs
-  Confirms: correct integer returned per origin type,
-  floor applied correctly, zero guard returns 0 for all origins,
-  proportions sum correctly across all segments.
+Proposal-only material does not amend this specification: see
+[`PROPOSAL_005.md`](PROPOSAL_005.md) for Proposal 005 and
+[`proposals/PROPOSAL_007.md`](proposals/PROPOSAL_007.md) for Proposal 007.
+Neither proposal establishes a current LPS envelope, registry, trust, or
+production claim.
 
-### Adversarial test coverage
-Tampered visible text — returns failed with original_manifest.
-Certificate fingerprint mismatch — returns failed.
-Missing signal — returns degraded with anti_forensic_note.
-Corrupted signal — returns degraded.
+### Proposal 007 testing-tool evidence [NON-NORMATIVE]
 
-### Outstanding test gaps
-- Malformed CBOR input to verificationTool.mjs
-- A.9 structured extraction path — removed. A.8 is the only
-  extraction path in verificationTool.mjs as of July 7 2026.
-  Closed OPEN-1.
-- Certificate fetch failure — network unavailable scenario
-- Chain depth test — not applicable until multi-round
-  provenance is implemented
-- PROPOSAL 005 overlap reconstruction — not yet tested
-- anchor_only state — not yet tested
-- partial_recovery state — not yet tested
-- Cross-copy seq deduplication logic — not yet tested
-- [Closed 2026-07-04] Replay attack detection — failed state
-  with extreme text length mismatch must not return
-  original_manifest. Confirmed passing in testVerification.mjs
-  (18% delta case). See CHANGELOG.md 2026-07-04 (7:31pm) entry.
-- injection_detected state — conflicting certificates
-  across chunk assemblies.
-- anchor_layer: absent flag — verified manifest with
-  no surviving anchors.
-- HMAC timing safety — verify crypto.timingSafeEqual()
-  used in all comparison paths.x
-- Registry input validation — invalid hash format,
-  invalid generating_id format, rate limit enforcement.
-- Chunk 001 extended payload — verify 40-byte slice
-  handled correctly through full embed and extract cycle.
-- reconstruction_completeness below 50% threshold —
-  low_confidence_reconstruction flag present in output.
-- paragraphAnalysis merge decisions — verify merge map
-  present in distribution plan and surfaced in output.
-- Magic prefix secondary validation — buffers passing
-  magic prefix but failing secondary checks discarded.
-- injection_volume_exceeded flag — document with
-  anomalous buffer count handled correctly.
+Proposal 007 has a separate cooperative-marker testing-tool grammar and result
+catalog. The following 2026-07-31 observations are recorded for that tool;
+they neither add fields to this specification nor replace the LPS status,
+`reason_code`, or `carrier_condition` contract in Sections 2–6.
 
----
+| Testing-tool case | Observed result | Required testing-tool result |
+|---|---|---|
+| Firefox/Linux hold-and-drag copy/paste | 100% marker survival in the tested flow | Valid |
+| Firefox/Linux double-click copy/paste | 100% marker survival; no trailing space observed | Valid |
+| Tested BiDi-language content | 100% marker survival despite highlighting glitches | Valid |
+| Malformed sequence | Correct rejection | `E-0-0-2: INVALID_TYPE` |
+| Duplicate header | 100% survival; correct rejection at normalized index `5` | `E006: DUPLICATE_HEADER` |
+| Orphaned open marker | Correct rejection at normalized index `5` | `E-007: ORPHANED_OPEN` |
+| Orphaned close marker | Correct rejection at normalized index `34` | `E-008: ORPHANED_CLOSE` |
+| Trailing normalization | Correct behavior; 100% marker survival | Valid |
+| Internal codepoints | 100% survival; correctly detected | `E-009: INTERNAL_SIGNAL` |
 
-## 9. Open Questions — Blocking
-These must be resolved before building the signing layer:
-- [ ] Signing algorithm selection —  DEFINED, ES256 ECDSA P-256
-- [ ] Key storage method for v0.1
-- [ ] Capacity threshold for Unicode variation selectors
-      [IN PROGRESS — first data point logged in section 4, June 2026]
-- [ ] Passing/failing/degraded output format —  DEFINED, JSON, four states
-- [ ] Certificate rotation procedure
-      v0.1 certificate expires 365 days from generation.
-      Procedure for rotating to a new certificate without
-      breaking verification of documents signed with the
-      old one is not defined. Requires: new cert generation,
-      new lps-certificates repo commit, new cert_url and
-      cert_fingerprint in signingLayer.mjs, decision on
-      whether old signed documents remain verifiable.
-      [OPEN — pre-working-group-submission item]
-- [ ] Multi-round provenance architecture
-      Sequential signing rounds — human draft, AI edit,
-      human revision — produce multiple signed manifests.
-      How the verification tool handles a document that
-      has been through multiple signing cycles is not
-      defined. Requires: ingredient chain architecture
-      decision, chain depth limit, poisoned chain detection.
-      References: SPEC.md [H1], [H2], [H3] from proposal repo.
-      [OPEN — post-v0.1, pre-working-group-submission]
-      
-- [ ] Minimum document length requirement for paragraph-bound
-      copy model — total payload size must be profiled before
-      implementation. Short documents may not have sufficient
-      characters to carry one full copy per paragraph.
-- [ ] Anchor manifest signing — deferred to v0.2. Unsigned
-      anchors are forensically useful but not cryptographically
-      verifiable independently.
-- [ ] c2pa-text chunk header exposure — extraction output
-      must expose chunk headers for reconstruction logic.
-      May require implementation above c2pa-text layer.
-- [x] Minor mismatch threshold for original_manifest disclosure
-      in failed state — LOCKED at 10% text length difference,
-      implemented in verificationTool.mjs. Revisit if forensic
-      or legal input post-submission indicates 10% is too tight
-      (leaks provenance) or too loose (withholds forensically
-      valuable information).
+For that testing tool, headers are document-scoped and the embedding tool must
+support different header sizes. Lens 200 remains undefined and limited to
+testing-tool scope. Human spans, per-span ordinals, and per-span total-count
+fields are excluded from the current direction. Internal codepoints within a
+valid marker context use the internal-signal path. The listed error identifiers
+and normalized indexes remain fixed testing-tool expectations unless a
+separately approved error-catalog change is made.
 
-- [ ] Injection volume cap formula — paragraphCount ×
-      totalChunks × 3 proposed. Needs profiling against
-      realistic document sizes before locking. Cap too low
-      rejects legitimate buffers. Cap too high allows
-      resource exhaustion.
-
-- [ ] Registry rate limit threshold — 100 registrations
-      per generating ID per hour proposed. Needs operational
-      data to validate. Too low breaks legitimate high-volume
-      generation pipelines. Too high allows flooding.
-
-- [ ] generating_id format definition — UUID or versioned
-      tool identifier pattern proposed. Needs working group
-      input. Format must be flexible enough for third-party
-      integrators but strict enough to block arbitrary strings.
-
-- [ ] reconstruction_completeness threshold for
-      low_confidence_reconstruction flag — 50% proposed.
-      Below this threshold the partial breakdown may mislead
-      more than it informs. Needs forensic input on minimum
-      viable segment coverage for a report to be admissible.
-
-- [ ] anchor_layer: absent flag — defines what absence of
-      anchors means forensically when full manifest verified.
-      Is it always evidence of manipulation or are there
-      legitimate cases where anchors are stripped — platform
-      rendering, format conversion — without adversarial intent.
-      Needs working group input before the flag can carry
-      forensic weight.
-- [x] Trailing whitespace normalization before hashing — LOCKED
-      Strip rule: /[\r\n ]+$/ applied to visible text before
-      text_hash and text_length are computed at signing time
-      (manifestGenerator.mjs), and to extracted clean text before
-      the received hash is computed at verification time
-      (verificationTool.mjs). Both sides apply identically.
-      Empirically derived from editor survival matrix collected
-      July 7 2026 — 37 runs across 13 editors. Characters observed:
-        U+000A \n — Google Docs automatic copy-out behavior
-        U+0020 space — Word Browser automatic copy-out behavior
-        U+0020 + U+000A — LinkedIn post and Instagram compose
-          after user-typed trailing space
-        U+0020 only — all other editors, user-typed trailing space
-      No U+00A0 or U+000D observed. \r included as zero-cost
-      conservative addition for untested Windows Word.
-      Closes OPEN-2.
-
-- [x] Canonical key generation command — LOCKED
-      Private key must be generated using OpenSSL 3.x with
-      the P-256 named curve. The generated key must use
-      named-curve encoding (ASN1 OID: prime256v1 /
-      NIST CURVE: P-256), which is compatible with
-      Node.js crypto. Keys generated with LibreSSL that
-      encode explicit EC parameters are not supported.
-
-      Generation:
-      openssl genpkey -algorithm EC \
-        -pkeyopt ec_paramgen_curve:P-256 -out private.pem
-
-      Verification:
-      openssl pkey -in private.pem -text -noout
-
-      Expected output includes:
-      Private-Key: (256 bit)
-      ASN1 OID: prime256v1
-      NIST CURVE: P-256
----
-
-## 10. Change Log
-v0.1-draft ## 10. Change Log
-v0.1-draft — June 2026 — skeleton created
-v0.1-registry-stub — June 21 2026 — registry stub implemented.
-  Added: registryClient.mjs, testRegistry.mjs,
-  testRegistryVerification.mjs. Updated: verificationTool.mjs
-  registry_required state wired. Supabase tables created:
-  registry_records, usage_events. All six tests passing.— June 2026 — skeleton created
-
-v0.1-prod-cert — 2026-07-08 — cert_url locked to production HTTPS URL.
-  signingLayer.mjs updated. testVerification.mjs clean case no longer
-  requires allowLocalCert. All seven tests confirmed passing under
-  production cert_url. Appendix A in working-group-submission.md
-  replaced with live verified output from this run.
-
-v0.1-cose-fix — June 30 2026 — corrected ES256 signature encoding.
-  signingLayer.mjs and verificationTool.mjs updated to use
-  dsaEncoding: 'ieee-p1363' instead of Node's default DER
-  encoding. Closes a label/format mismatch where the algorithm
-  field claimed es256 (which specifies raw r‖s) while actual
-  signature bytes were DER-encoded, variable length ~70-72 bytes.
-  Fixed signatures are now exactly 64 bytes, fixed length, for
-  P-256. Verified via internal test suite and an external
-  cross-check against the independent jose library (panva/jose),
-  confirming primitive-level ES256 signature encoding compatibility
-  rather than internal-only self-consistency. Full JWS/COSE_Sign1
-  envelope interoperability remains unimplemented. No persisted
-  signed manifests existed at time of fix — no migration required.
-  ---
-
-## 11. Audit and Review History
-
-### June 30 2026 — ES256 signature encoding conformance gap
-Section 3 (Signing Layer) is marked SECURITY-CRITICAL. The
-`algorithm` field declared `es256` from initial implementation,
-but signingLayer.mjs used Node's default DER signature encoding
-rather than the raw r‖s (IEEE P1363) encoding the ES256
-identifier specifies. This was a label/format mismatch present
-from initial build through external review on June 30 2026.
-It was identified through external review, not through this
-project's internal audit process — stated explicitly here for
-accuracy. Fixed same day: dsaEncoding: 'ieee-p1363' added to
-sign() and verify() calls. Verified through the existing internal regression suite (testSigning.mjs and testVerification.mjs) together with an independent primitive-level interoperability cross-check against the panva/jose library. Full envelope-level
-(COSE_Sign1/JWS) interoperability remains unimplemented — see
-Section 9.
-
-Process note: the discovery scan for persisted old-format
-signatures covered local *.json files only. It did not cover
-the lps-certificates GitHub repository or markdown-embedded
-example manifests in this repo or the proposal repository.
-No migration was required for what was scanned. A wider scan
-covering those locations is an outstanding action item.
-
-### Outstanding — standards-conformance verification sweep
-A systematic pass confirming every claimed conformance to an
-external standard (C2PA, COSE, JOSE, RFC 3161, X.509, SHA-256)
-has been independently tested, not merely asserted, has not yet
-been performed. The ES256 encoding gap was caught by asking
-about one specific claim; no equivalent check has been run
-against the others. This sweep is required before working group
-submission.
+These observations are not a claim of universal transport compatibility or
+invisibility. They do not resolve the source of trailing spaces in other
+clipboard paths, prove that BiDi highlighting cannot alter selection boundaries
+or codepoint order, or define production marker grammar, placement, fallback,
+or injection controls. The complete evidence and open-question record is in
+[`local-files/ADR_4`](local-files/ADR_4).

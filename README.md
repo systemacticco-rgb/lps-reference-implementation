@@ -2,8 +2,10 @@
 
 **Repository:** lps-reference-implementation (private)
 **Maintained by:** Brayan Daniel Rodriguez Lugo — systemacticco-rgb
-**Status:** v0.1 — core pipeline built and locally tested
+**Status:** v0.1 — audited reference pipeline; not production approval
 **Counterpart (public):** github.com/systemacticco-rgb/linguistic-provenance-schema
+**Document revision:** V2 — Proposal 007 testing-tool evidence alignment, 2026-08-02
+**Session-log alignment:** standards-boundary remediation, 2026-07-29
 
 ---
 
@@ -11,7 +13,11 @@
 
 This is the private implementation repository for the Linguistic Provenance Schema (LPS). It contains the working reference implementation, the internal technical specification, architecture and security documentation, and the changelog. It is not the public-facing proposal. That lives in the public repository above.
 
-This repository is the build authority. If there is ever a conflict between what a document says and what the code does, the discrepancy is a bug to be resolved — not an invitation to follow whichever source is more convenient. SPEC.md is the agent-directive specification. README.md in the public repo is the schema authority. Code follows both.
+For the audited current-state scope, the standalone current-state ADR controls
+conflicting historical conclusions. [`SPEC.md`](SPEC.md) owns the normative
+interface and behavioral contract; this README owns repository orientation.
+If code and documentation disagree, record and resolve the discrepancy rather
+than choosing whichever source is more convenient.
 
 ---
 
@@ -68,8 +74,8 @@ truth. Conflicts between documents are bugs. The resolution order is:
 
 | Question | Authoritative source |
 |---|---|
-| What does the manifest schema look like? | README.md in the public repo (§3.2) |
-| How should a build agent implement a component? | SPEC.md (this repo) |
+| What is the current normative interface and behavioral contract? | SPEC.md (this repo) |
+| How should a build agent implement a component? | SPEC.md, ARCHITECTURE.md, and SECURITY_MODEL.md (this repo) |
 | What is the current build status of each component? | IMPLEMENTATION_STATUS.md |
 | What cryptographic decisions are locked vs open? | SECURITY_MODEL.md |
 | What changed and when? | CHANGELOG.md |
@@ -77,29 +83,66 @@ truth. Conflicts between documents are bugs. The resolution order is:
 | What does the system look like visually? | DIAGRAMS.md |
 | What is proposed but not yet built? | PROPOSAL_005.md in this repository |
 
-Schema changes always happen in the public repo README.md first. SPEC.md
-and code follow. Never change the schema in code first.
+Do not change the schema in code first. Update the normative contract and its
+implementation evidence together, then use the public README and working-group
+submission as orientation and reviewer-facing material rather than parallel
+schema authorities.
+
+---
+
+## Standards-Conformance and Deferred-Work Boundary
+
+Treat PRE-3 as pending, bounded verification work—not as permission to make
+new standards or architecture claims. Before external wording is expanded,
+PRE-3 must inventory each C2PA, COSE, JOSE, RFC 3161, X.509, SHA-256,
+signature, certificate, canonicalization, and validation claim; map it to an
+exact normative reference; independently test it; and record supported,
+unsupported, incomplete, or out-of-scope status. Required artifacts are the
+claim-to-standard matrix, exact version references, test-vector or
+independent-parser results, deviations/non-claims, and a remediation list.
+
+The current LPS text carrier is a selector-based LPS JSON/native-crypto
+format. It is not a C2PA A.8 implementation: the documented implementation
+does not emit the C2PA A.8 wrapper's C2PA Manifest Store in JUMBF or a C2PA
+COSE_Sign1_Tagged claim signature. Do not call this workflow C2PA-compatible,
+and do not collapse the internal trailing-whitespace strip rule into C2PA
+data-hash validation. The latter has different NFC UTF-8 and wrapper-offset
+requirements.
+
+The primary selector-carrier submission decision is closed as an internal
+portfolio decision. It does not create C2PA A.8 conformance or close PRE-3.
+
+Certificate fingerprint checking is implemented behavior; a C2PA certificate
+status or OCSP result is not. Any future revocation policy is an LPS design
+choice. C2PA's allowance for skipped online OCSP checks must not be rewritten
+as a mandatory C2PA revocation requirement.
+
+Proposal 005 is deferred until working-group feedback; do not build or
+pre-submit revise it. Proposal 006 remains under review and is inactive until
+after submission. The audited registry supports only exact-hash recovery;
+formal provider, issuer, and `generating_id` identity semantics, any future
+identifier grammar, and their governance remain deferred.
 
 ---
 
 ## Document Summaries
 
 ### SPEC.md
-The internal build specification. Written in agent-directive voice — it tells build agents exactly how to implement each component. It is not sanitized for external review and must not be shared with the working group as-is. It covers input format, confidence source contract, manifest compression, signing constraints, embedding layer, verification outputs, registry validation, security globals, test requirements, and open questions. 
-Every component section is labeled BUILT, DEFINED, PLANNED,
-PLACEHOLDER, SECURITY-CRITICAL, PARTIALLY IMPLEMENTED, or
-Skeleton. If a section is not explicitly marked BUILT, treat
-it as undefined.
+The internal build specification. It defines the current audited contract as
+well as clearly labelled historical and deferred material. Current contract
+sections are marked `[CURRENT AUDITED CONTRACT]`; other labels distinguish
+built implementation details from deferred or historical notes. It is not a
+working-group submission.
 
 ### ARCHITECTURE.md
 Describes how the four pipeline stages connect — manifest generation, signing, embedding, verification — and how the registry, certificate store, and compression layer fit within that flow. Read this before making any change that touches more than one file. It is the map that prevents coupling mistakes.
 
 ### SECURITY_MODEL.md
-Defines the trust boundaries, key handling rules, threat model, and global security constraints that apply to every component without exception. Covers private key storage, HMAC comparison requirements, certificate delivery, input validation policy, and what each verification state means forensically. Read this before touching signingLayer.mjs, verificationTool.mjs, or registryClient.mjs. Security constraints in this document override convenience
+Defines the trust boundaries, key handling rules, threat model, and global security constraints that apply to every component without exception. Covers certificate delivery, input-validation boundaries, registry limits, and production exclusions. HMAC/HKDF are deferred cryptographic-profile decisions, not a current verified control. Read this before touching signingLayer.mjs, verificationTool.mjs, or registryClient.mjs. Security constraints in this document override convenience
 in every case.
 
 ### IMPLEMENTATION_STATUS.md
-The single source of truth for what is actually built and tested versus what is only specified or planned. Before claiming a feature exists, check here. Before telling the working group something is implemented, verify it here first. It is updated on every commit that changes build status.
+The evidence-oriented record of what the current audit confirmed and what remains deferred. Before claiming a feature exists, check here. Before telling the working group something is implemented, verify it here first.
 
 ### DIAGRAMS.md
 Visual representations of the pipeline flow, verification state machine, compression structure, and embedding carrier model. Reference when explaining the system to a new collaborator or when debugging a component interaction that is hard to reason about from code alone.
@@ -145,7 +188,7 @@ committed for v0.1 testing only and is hosted publicly at:
 `https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem`
 
 `private.pem` and `cert.pem` must be generated as a matching pair. If
-they do not match, the embedded A.8 manifest may still survive
+they do not match, the embedded LPS selector payload may still survive
 copy/paste, but verification will fail because the certificate public
 key cannot validate the signature produced by the private key. The
 signing layer now checks this before signing and fails with:
@@ -174,32 +217,17 @@ node testRegistryVerification.mjs
 node testConfidenceFallback.mjs
 ```
 
-All seven tests passing as of July 6, 2026. If any test fails after a change,
-do not commit. Resolve the failure first.
+The current audit records assertion-backed integration and regression evidence,
+including registry-routing and certificate-route checks. See
+[`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the evidence scope;
+do not characterize local test execution as production validation.
 
-[2026-07-08] cert_url in signingLayer.mjs changed from file://
-placeholder to production HTTPS URL. First full end-to-end pipeline
-verification under production cert confirmed passing. testVerification.mjs
-clean case (J.3) no longer requires allowLocalCert. All seven tests
-passing under production conditions.
-
-[2026-07-04 7:31pm] The two D.6 text_length threshold cases below were not
-ordinary coverage gaps. Their absence was hiding a live defect: the
-disclose-branch in verificationTool.mjs's STEP 4 contained a dead duplicate
-of evaluateDisclosureThreshold()'s decision logic, referencing undeclared
-variables. Any real small-edit input reaching that branch would have thrown
-an unhandled ReferenceError instead of returning a failed status with
-original_manifest disclosed. The duplicate has been removed — the call site
-now uses evaluateDisclosureThreshold()'s decision directly, with no
-recomputation. Both cases have been added to testVerification.mjs and
-confirmed passing in the real environment: small-edit (2% delta) discloses
-original_manifest as expected; extreme-mismatch (18% delta) withholds it as
-expected. See CHANGELOG.md 2026-07-04 (7:31pm) entry for the full defect
-record.
-
-Remaining outstanding test gap, tracked in SPEC.md §8:
-- Registry input validation cases: invalid hash format, invalid generating_id,
-  rate limit enforcement (not yet built).
+Historical test-maintenance records belong in
+[`CHANGELOG.md`](CHANGELOG.md); the current audit evidence belongs in
+[`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md). A configured HTTPS
+certificate-route check is not production certificate governance. Registry
+SLOs, monitoring, retry policy, incident response, rollback, and rate-limit
+policy remain deferred.
 
 ---
 
@@ -231,56 +259,83 @@ The local server uses the real root modules:
 `generateManifest -> signManifest -> embedManifest -> verifyManifest`.
 It opts into local `cert.pem` verification and skips registry lookup so
 manual editor tests do not require internet certificate fetches or Supabase.
-Production verification remains stricter and should not inherit those local
+Production controls have not been validated and must not inherit those local
 testing allowances.
+
+This is an LPS selector-carrier test rig, not a C2PA A.8 conformance test.
+Its trailing-whitespace behavior is an internal LPS hash rule, separate from
+C2PA A.8 data-hash validation.
 
 The test rig appends one JSONL entry to `verification-log.jsonl` in the
 repository root on every verification run. This file is gitignored and
 is not committed. It is the data source for the editor survival matrix.
 To share specific results, export rows manually.
 
-### Production constraints and safe operating ranges
+### Scoped operational observations
 
-Safe manifest size: production manifests with realistic segment counts (3–10 segments) land between 400 bytes and 1,500 bytes compressed. Invisible character counts at this size remain below approximately 3,000 variation selectors. Editor copy-paste behavior at this size is clean across all editors tested in the July 2026 survival study.
+The July 2026 3–10-segment and carrier-size observations are scoped research
+data, not a safe operating range, service-level target, or production
+deployment guarantee. Carrier preservation, editor latency, platform
+reclassification, and token overhead vary by transport and remain external
+dependencies.
 
-Editor latency threshold: invisible character counts above approximately 6,000 variation selectors — corresponding to manifests above approximately 2,500–3,000 bytes — produce measurable copy-paste latency in rich-text editors that process character-level clipboard payloads. Apple Notes on macOS exhibits this behavior at 5kb manifest size and above. Latency is not carrier corruption — verification succeeds at all tested sizes.
+Token overhead is implementation- and platform-dependent. Integrations should
+measure it in their own context; the reference audit does not validate a
+production performance envelope.
 
-AI compose input reclassification: platforms including Claude and the OpenAI ecosystem may reclassify large invisible-character payloads as file uploads rather than plain text when pasted into compose inputs. The manifest survives reclassification but the workflow breaks. The reclassification threshold varies by platform and is not under LPS control. Measurement across all target platforms is an open item (OPEN-4).
-
-Token overhead: see the Token overhead in language model
-integrations section below.
-
-Code block constraint: LPS manifests must not be embedded inside code syntax blocks. Code renderers display invisible Unicode characters as visible replacement icons or colored markers. GitHub preserves the manifest invisibly at the file level. The constraint applies to inline and fenced code blocks only.
+Code-block carriage is outside the audited scope. Renderers may expose invisible
+characters, and any file-level preservation observation is scoped rather than a
+general transport guarantee. No carrier mechanism for inline or fenced code
+blocks is defined.
 
 ---
 
 #### Token overhead in language model integrations
 
-Text carrying LPS-embedded manifests incurs increased token
-consumption when passed to any language model API. Unicode variation
-selectors used by the A.8 carrier are not collapsed by tokenizers —
-each invisible character consumes token budget independently.
-Production manifests in the safe operating range (3–10 segments,
-400–1,500 bytes compressed) produce invisible character counts below
-approximately 3,000 variation selectors. At this size the token
-overhead is measurable but not prohibitive. Manifests above this
-range — stress-test profiles only, not typical production use —
-produce proportionally higher overhead.
+Text carrying an LPS carrier can increase token use in downstream processing.
+The reference audit does not establish general tokenizer behavior, platform
+handling, or a deployment-size threshold. Any integration must measure its own
+carrier, transport, and token-cost effects before relying on it operationally.
 
-Two adoption scenarios both carry this constraint. If LPS is adopted
-at generation time — the AI provider embeds a manifest at the moment
-content is produced — the embedded text returned to the caller
-already carries the invisible payload, and any downstream API call
-passing that text to another model will consume additional tokens. If
-LPS is adopted via API retrieval — a third party fetches or receives
-LPS-embedded text and passes it to a model — the same overhead
-applies at that call boundary. In either case, integrations must
-account for this overhead in token budget planning.
+---
 
-Strip the manifest before passing text to contexts where token cost
-is the primary constraint and provenance is not required at that step.
+## Separate Proposal 007 research
 
---- 
+Proposal 007 is a separate cooperative-marker testing-tool effort. It does not
+amend the LPS selector-carrier pipeline, `ev: 1` envelope, registry behavior,
+or audited result contract. Its 2026-07-31 local evidence is recorded as
+tested behavior, not as a universal cross-platform or production guarantee.
+
+| Tested path | Recorded Proposal 007 testing-tool result |
+|---|---|
+| Firefox/Linux drag-copy and double-click copy | 100% marker survival in the tested flows; the double-click flow showed no trailing space. |
+| Tested BiDi-language content | 100% marker survival despite highlighting glitches. |
+| Malformed sequence | Correct rejection: `E-0-0-2: INVALID_TYPE`. |
+| Duplicate header | Correct rejection: `E006: DUPLICATE_HEADER`, normalized index `5`. |
+| Orphaned open marker | Correct rejection: `E-007: ORPHANED_OPEN`, normalized index `5`. |
+| Orphaned close marker | Correct rejection: `E-008: ORPHANED_CLOSE`, normalized index `34`. |
+| Trailing normalization | Correct behavior and 100% marker survival in the tested flow. |
+| Internal codepoints | Correct detection: `E-009: INTERNAL_SIGNAL`. |
+
+The current testing-tool direction sets document-level headers, requires
+support for different header sizes, keeps Lens 200 undefined and limited to
+testing-tool scope, and excludes human spans, per-span ordinals, and per-span
+total-count fields. Internal codepoints within valid marker context take the
+internal-signal path.
+
+Rendering remains a usability and disclosure issue rather than a corruption
+signal: Linux LibreOffice displayed no glyphs; Linux VS Code displayed yellow
+outlined squares in code files only; Windows VS Code displayed rectangles;
+Windows browser testing displayed no glyphs; and Windows OneNote displayed
+`ƒ{}`. The evidence does not establish universal copy/paste preservation,
+universal invisibility, codepoint-order preservation under BiDi selection, or
+the cause of trailing-space observations in other environments.
+
+See [`proposals/PROPOSAL_007.md`](proposals/PROPOSAL_007.md) for proposal
+context and [`local-files/ADR_4`](local-files/ADR_4) for the append-only test
+evidence record and unresolved follow-ups.
+
+---
 
 ## Git Remotes
 
@@ -298,8 +353,8 @@ git push origin main
   notes only, never distributed
 - `RESEARCH.md` — removed July 3 2026, content absorbed into CHANGELOG.md
   and IMPLEMENTATION_STATUS.md
-- The public working-group submission document — lives in the public repo
-- The public README (schema authority) — lives in the public repo
+- The public working-group discussion draft — lives in the public repo
+- The public README (external orientation) — lives in the public repo
 
 ---
 
@@ -311,19 +366,23 @@ information. Do not resolve them unilaterally:
 - **generating_id schema** — safety-only check in place; structural format
   (opaque token vs. structured identifier) deferred to working group feedback.
   See SPEC.md §9.
-- **PROPOSAL 005 key hierarchy** — HKDF-SHA256 confirmed as primitive; ikm,
-  salt, and info not yet locked pending root-of-trust decision.
-- **Canonicalization version pinning** — cbor's exact resolved version
-  is currently pinned via package-lock.json only; package.json itself
-  still ranges. Freezing the encoder permanently (Path A) or tagging
-  manifests with an encoder version (Path B, rejected — creates a
-  circular trust problem for PROPOSAL 005 reconstruction) were both
-  evaluated and deferred. Decision required before PROPOSAL 005 ships
-  or before working-group feedback requires an answer. See
-  SECURITY_MODEL.md.
-- **HMAC vs. asymmetric for anchor layer** — HMAC correct if anchor is an
-  internal self-check; asymmetric required if independent third-party
-  verification of reconstructed manifests is a product goal. Decision pending.
+- **PRE-3 standards-conformance sweep** — pending verification work. No
+  C2PA, COSE, JOSE, RFC 3161, X.509, SHA-256, certificate, canonicalization,
+  or validation claim may be expanded before its evidence matrix is complete.
+- **PROPOSAL 005** — deferred pending working-group feedback. Do not build or
+  pre-submit revise its carrier, anchor, reconstruction, or key-hierarchy
+  work.
+- **PROPOSAL 006** — proposal only and under review. Revisit after
+  submission; no active revision or implementation work.
+- **LLM identifier prefix** — not designed or authorized. Its purpose,
+  namespace, governance, lifecycle, privacy, transport, and authentication
+  boundary require working-group agreement.
+- **Canonical-CBOR profile and decoder bounds** — the current audit confirms
+  duplicate-key rejection but not a complete canonical-CBOR profile or
+  resource bounds. These remain deferred. See SECURITY_MODEL.md.
+- **Broader cryptographic profile** — P-256 and HMAC/HKDF decisions, including
+  any key hierarchy, remain deferred. Do not treat a historical anchor-layer
+  note as a current cryptographic-profile decision.
 - **Rate limiting on registerContent()** — Supabase-backed count query
   against created_at is the correct mechanism; created_at confirmed
   present on registry_records. Not yet built. The threshold value
@@ -332,13 +391,7 @@ information. Do not resolve them unilaterally:
   yet to base it on. Do not treat that number as settled. Decision on
   both threshold and window length deferred until real usage data
   exists. See SPEC.md §9.
-- **SPEC.md §3 anchor HMAC derivation line** — updated to
-  specify HKDF-SHA256 via crypto.hkdfSync('sha256', ikm, salt,
-  info, 32). ikm, salt, and info remain undefined pending the
-  key hierarchy decision. Implementation held until that
-  decision locks.
 
 ---
 
 *v0.1 — July 2026*
-```

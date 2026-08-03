@@ -1,7 +1,9 @@
+import assert from 'node:assert/strict';
 import { generateManifest } from './manifestGenerator.mjs';
 import { signManifest } from './signingLayer.mjs';
 
 const visibleText = 'A'.repeat(401);
+const contentSignedAt = '2026-08-02T00:00:00.000Z';
 
 const manifest = generateManifest({
   visibleText,
@@ -23,20 +25,22 @@ const manifest = generateManifest({
     }
   ],
   signingTool: "lps-reference-implementation-v0.1",
-  signedAt: new Date().toISOString()
+  contentSignedAt
 });
 
-try {
-  const result = signManifest(manifest);
-  console.log("--- Signing result type ---");
-  console.log(typeof result);
-  console.log("--- Signing result ---");
-  console.log(result);
-  console.log("--- PASS ---");
-} catch (err) {
-  console.log("--- FAIL ---");
-  console.log(err.message);
-}
+assert.equal(manifest.content_signed_at, contentSignedAt);
+assert.equal(Object.hasOwn(manifest, 'signed_at'), false);
+
+const signed = signManifest(manifest);
+
+assert.equal(signed.ev, 1);
+assert.equal(signed.manifest.content_signed_at, contentSignedAt);
+assert.equal(typeof signed.signed_at, 'string');
+assert.ok(signed.signed_at.length > 0);
+assert.equal(typeof signed.signature, 'string');
+assert.ok(signed.signature.length > 0);
+
+console.log('PASS signing envelope assertions');
 
 /*
  * [Y.1 TEST] SIGNING_ENABLED killswitch

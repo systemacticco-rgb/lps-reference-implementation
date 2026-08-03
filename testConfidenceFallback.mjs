@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { calculateFallbackConfidence } from './confidenceFallback.mjs';
 
 const segments = [
@@ -10,14 +11,18 @@ const segments = [
   { segmentId: 's007', startOffset: 251, endOffset: 500, origin: 'ai_generated' }
 ];
 
-console.log('--- TEST 1: correct integers returned per origin type ---');
 const result = calculateFallbackConfidence(segments);
-console.log('ai_generated:',      result.ai_generated,      '— expected 81');
-console.log('ai_modified_human:', result.ai_modified_human, '— expected 16');
-console.log('human:',             result.human,             '— expected 2');
+assert.deepEqual(result, {
+  ai_generated: 82,
+  ai_modified_human: 15,
+  human: 1
+});
 
-console.log('\n--- TEST 2: zero guard ---');
 const empty = calculateFallbackConfidence([]);
-console.log('human:',             empty.human,             '— expected 0');
-console.log('ai_generated:',      empty.ai_generated,      '— expected 0');
-console.log('ai_modified_human:', empty.ai_modified_human, '— expected 0');
+assert.deepEqual(empty, {
+  human: 0,
+  ai_generated: 0,
+  ai_modified_human: 0
+});
+
+console.log('PASS: fallback confidence assertions passed');

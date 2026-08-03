@@ -11,8 +11,7 @@
 // VERIFY side calls your real verifyManifest() — works now.
 // EMBED side calls generateManifest -> signingLayer -> embedManifest.
 //   It dynamic-imports signingLayer.mjs and looks for an exported
-//   sign function. If your export name differs, it returns a clear
-//   message listing what your module actually exports, so you can
+//   sign function. 
 //   tell me the correct name (no crash, server still boots).
 //
 // Local survival testing should not require network verification.

@@ -4,15 +4,35 @@
 import { createHash } from 'crypto';
 import { calculateFallbackConfidence } from './confidenceFallback.mjs';
 
-export function generateManifest({ visibleText, segments, signingTool, signedAt }) {
-  // Replace the existing content_segments mapping block in generateManifest()
+export function generateManifest({
+  visibleText,
+  segments,
+  signingTool,
+  contentSignedAt
+}) {
+  if (!Array.isArray(segments)) {
+    throw new Error('segments must be an array');
+  }
+
+  if (typeof contentSignedAt !== 'string' || contentSignedAt.length === 0) {
+  throw new Error('contentSignedAt must be a non-empty timestamp string');
+  }
 
   // Calculate fallback confidence map before mapping segments —
   // only used when a segment arrives with no confidence value
   const fallbackConfidence = calculateFallbackConfidence(segments);
 
   const content_segments = segments.map((segment) => {
-    const hasConfidence = segment.confidence !== undefined && segment.confidence !== null;
+    const hasConfidence = segment.confidence !== undefined;
+    const hasConfidenceSource = Object.prototype.hasOwnProperty.call(segment, 'confidenceSource');
+
+    if (segment.confidence === null || (hasConfidence && (typeof segment.confidence !== 'number' || !Number.isFinite(segment.confidence)))) {
+      throw new Error(`Segment ${segment.segmentId}: confidence value must be a finite number`);
+    }
+
+    if (hasConfidenceSource && segment.confidenceSource !== (hasConfidence ? 'tool' : 'fallback')) {
+      throw new Error(`Segment ${segment.segmentId}: confidenceSource contradicts the supplied confidence`);
+    }
 
     // Normalize float to integer if tool supplied a float (e.g. 0.95 → 95)
     const rawConfidence = hasConfidence
@@ -71,17 +91,18 @@ export function generateManifest({ visibleText, segments, signingTool, signedAt 
   const human_proportion = totalCharCount === 0 ? 0 : Math.round((humanCharCount / totalCharCount) * 100) / 100;
   // Math.round(x * 100) / 100 keeps proportions to two decimal places. 0.4, not 0.39999999...
 
-const strippedText = visibleText.replace(/[\r\n ]+$/, '');
-  const textHash = createHash('sha256').update(strippedText, 'utf8').digest('hex');
+  const strippedText = visibleText.replace(/[\r\n ]+$/, '');
+  const canonicalTextBytes = Buffer.from(strippedText, 'utf8');
+  const textHash = createHash('sha256').update(canonicalTextBytes).digest('hex');
 
   return {
     lps_version: "0.1",
     text_hash: textHash,
-    text_length: strippedText.length,
+    text_length: canonicalTextBytes.length,
     content_segments,
     overall_ai_proportion,
     human_proportion,
     signing_tool: signingTool,
-    signed_at: signedAt,
+    content_signed_at: contentSignedAt,
   };
 }

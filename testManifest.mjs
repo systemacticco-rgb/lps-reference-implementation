@@ -1,5 +1,5 @@
 import { generateManifest } from './manifestGenerator.mjs';
-
+import assert from 'node:assert/strict';
 /*
  * [G.1] WHAT THIS FILE DOES
  * This is the test for Stage 1 — manifestGenerator.mjs.
@@ -50,7 +50,7 @@ const visibleText = 'A'.repeat(501);
  * These are the values overall_ai_proportion and human_proportion
  * should show in the output. Verify them by reading the printed JSON.
  */
-
+const contentSignedAt = '2026-08-02T00:00:00.000Z';
 const result = generateManifest({
   visibleText,
   segments: [
@@ -83,10 +83,21 @@ const result = generateManifest({
     }
   ],
   signingTool: "lps-reference-implementation-v0.1",
-  signedAt: "2026-06-10T00:00:00Z"
+  contentSignedAt: contentSignedAt
   // signingTool and signedAt are passed through unchanged — generateManifest() records
   // them but does not compute or validate them. They appear in the output as given.
 });
+
+assert.equal(result.content_signed_at, contentSignedAt);
+assert.equal(Object.hasOwn(result, 'signed_at'), false);
+
+const canonicalText = visibleText.replace(/[\r\n ]+$/, '');
+assert.equal(result.text_length, Buffer.byteLength(canonicalText, 'utf8'));
+
+assert.equal(result.content_segments.length, 3);
+assert.equal(result.content_segments[0].confidence_source, 'tool');
+assert.equal(result.content_segments[1].confidence_source, 'tool');
+assert.equal(result.content_segments[2].confidence_source, 'tool');
 
 /*
  * [G.4] THE OUTPUT

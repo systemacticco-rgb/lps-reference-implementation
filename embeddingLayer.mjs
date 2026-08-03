@@ -3,6 +3,7 @@
 // ============================================================
 import {
   embedManifest as embedIntoText,
+  extractManifest,
   worstCaseWrapperByteLength
 } from 'c2pa-text';
 import { compress, encodeToCBOR } from './compression.mjs';
@@ -23,8 +24,14 @@ export function embedManifestWithDiagnostics(visibleText, signedManifest) {
     // A.8 uses the C2PA text wrapper encoded as Unicode variation selectors.
     // This is the path needed for editor copy/paste survival testing: the
     // visible text stays unchanged and the carrier is invisible.
+    const text = embedIntoText(visibleText, manifestBytes);
+    const extracted = extractManifest(text);
+    if (!extracted || extracted.cleanText !== visibleText) {
+      throw new Error('Embedding altered the visible text');
+    }
+
     return {
-      text: embedIntoText(visibleText, manifestBytes),
+      text,
       embedding_method_used: 'A.8',
       manifest_byte_size: manifestBytes.length,
       visible_text_length: visibleText.length,

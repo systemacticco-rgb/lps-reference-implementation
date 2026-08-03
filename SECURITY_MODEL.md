@@ -1,150 +1,146 @@
-# SECURITY_MODEL.md
+# LPS Security Model
 
-## Purpose
+## Scope
 
-This document defines the security model for the LPS reference implementation. It states what the system protects, where trust boundaries exist, what attackers are assumed to do, and which security properties are required for the v0.1 baseline and for future work such as PROPOSAL 005.
+This document states the security boundaries of the audited LPS reference
+implementation. It distinguishes controls confirmed in that scope from
+production controls that remain deferred. It does not grant production
+deployment approval, establish issuer authorization, or make C2PA, SynthID, or
+general AI-watermarking interoperability claims.
 
-## Security goals
+The exact protocol contract is in [`SPEC.md`](SPEC.md); audited evidence is in
+[`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md).
 
-LPS is designed to preserve the integrity of provenance claims for text content. The core goals are:
+## Confirmed security properties
 
-- bind a signed manifest to a specific visible text representation
-- detect post-signing modification of visible text
-- preserve provenance signals through supported text embedding methods
-- provide a deterministic recovery path when carrier stripping occurs and registry data is available
-- make implementation status explicit so built behavior is never confused with future proposals
-- avoid claiming authorship truth; LPS proves claim integrity, not claim truth
+### Authenticated record and text binding
 
-## Primary assets
+- The direct outer `ev: 1` field is authenticated; it is not represented by
+  `FIELD_MAP.ev`.
+- `content_signed_at` is in the inner manifest and records the generating
+  source's content-record signing or commitment time. Outer `signed_at` records
+  when LPS signed the complete envelope. Both are authenticated.
+- Text binding first strips trailing U+000D, U+000A, and U+0020, then derives
+  `text_hash` (SHA-256) and byte `text_length` from the same UTF-8 byte
+  sequence. Both checks participate in the text-binding contract.
+- `confidence_source` distinguishes a tool-supplied confidence value from an
+  LPS fallback value. It is provenance about the value, not evidence of the
+  truth of the underlying origin claim.
 
-The main assets protected by the system are:
+### Envelope-validation boundary
 
-- the visible text being described
-- the canonical manifest derived from that text
-- the signature over the canonical manifest
-- the certificate used to verify the signature
-- the content hash used for recovery and replay detection
-- registry records containing hashes, tokens, and timestamps
-- any derived HMAC material used for future anchor-layer work
-- the trust relationship between the verifier and the certificate source
+Duplicate top-level CBOR envelope keys are rejected before version routing,
+cryptographic verification, certificate retrieval, registry access, or
+fallback. Their result is:
+
+```text
+invalid_envelope / noncanonical_encoding / present
+```
+
+A parseable but invalid envelope is also `invalid_envelope`; it must not be
+converted into registry recovery. This prevents decoder key collapse or schema
+failure from silently choosing a different security path.
+
+### Certificate-verification boundary
+
+The audited verifier accepts certificate retrieval only through its configured
+allowed HTTPS route and requires both certificate-fingerprint and signature
+verification. Runtime evidence confirms that route and visible-text tamper
+detection. This is a constrained retrieval and verification control, not a
+claim that the certificate issuer is trusted.
+
+### Registry-recovery boundary
+
+Registry lookup is not a normal verification dependency. It is available only
+when a carrier is absent, corrupted, or unparseable, and it uses an exact
+canonical-text hash. Its failure behavior is fail-closed:
+
+| Condition | Security result |
+|---|---|
+| Exact registry match | `registry_required / registry_match` |
+| No registry match | `degraded / registry_no_match` |
+| Transport or HTTP failure | `degraded / registry_unavailable` |
+| Malformed or incomplete response | `degraded / registry_response_invalid` |
+
+No registry outcome makes a carrier-free artifact `verified`, restores
+segment-level evidence, proves carrier removal, or authenticates an issuer.
+
+### Proposal 007 testing-tool marker boundary [SEPARATE, OBSERVED SCOPE]
+
+Proposal 007 marker testing is separate from the audited LPS envelope and its
+verification result contract. Its local test evidence records these
+testing-tool validation outcomes, which must remain deterministic after the
+tool's normalization step:
+
+| Condition | Required testing-tool outcome | Observed boundary |
+|---|---|---|
+| Malformed sequence | `E-0-0-2: INVALID_TYPE` | Correct rejection |
+| Duplicate header | `E006: DUPLICATE_HEADER`, normalized index `5` | Correct rejection after marker survival |
+| Orphaned open marker | `E-007: ORPHANED_OPEN`, normalized index `5` | Correct rejection |
+| Orphaned close marker | `E-008: ORPHANED_CLOSE`, normalized index `34` | Correct rejection |
+| Internal codepoint in valid marker context | `E-009: INTERNAL_SIGNAL` | Correct detection after tested browser transit |
+
+The same observed record reports valid results for Firefox/Linux drag-copy,
+double-click copy, tested BiDi-language content, and trailing normalization.
+Those paths showed marker survival in the tested flows, but they do not prove
+cross-platform, cross-browser, cross-editor, or provider compatibility.
+
+Visual glyphs are a usability and disclosure concern, not proof of corruption:
+the observed rendering varied by operating system, application, and file type.
+Marker corruption must be established by codepoint loss, mutation, reordering,
+or a testing-tool validation failure. The unresolved security-relevant work is
+to determine whether clipboard layers cause trailing spaces, whether BiDi
+selection can alter codepoint order or selection boundaries, and whether the
+testing-tool's future production grammar, marker-injection controls, and
+provider-compliance model need separate architecture decisions.
 
 ## Trust boundaries
 
-LPS has several distinct trust boundaries:
+| Boundary | What is confirmed | What is not established |
+|---|---|---|
+| Visible text and carrier | Both are untrusted until validation completes. | Carrier loss does not establish stripping, intent, authorship, or human origin. |
+| Generating source | It can supply confidence marked `tool`; absent confidence receives `fallback`. | No formal provider identity, provider attestation, or `generating_id` semantics are established. |
+| Signing material | Test-only material supported the audited reference tests. | Production key custody, isolation, rotation, access controls, and credential policy are not validated. |
+| Certificate route | Configured HTTPS retrieval, fingerprint comparison, and signature verification are confirmed. | Issuer trust, revocation, rotation, lifecycle governance, and trust-list policy are deferred. |
+| Registry | Exact hash recovery behavior is confirmed. | Registry SLOs, monitoring, retry policy, incident response, rollback, and identity authority are not validated. |
 
-- between the authoring tool and the manifest generator
-- between the manifest and the signing layer
-- between the embedded carrier and the external document surface
-- between the verifier and the registry
-- between local implementation state and future proposal-only architecture
-- between public proposal text and private implementation details
+## Provider and issuer non-claims
 
-No component should silently assume another component’s internal format unless that dependency is explicitly specified.
+A source hash, certificate URL, certificate fingerprint, or valid signature
+does not independently prove provider origin or authorized-issuer status.
 
-## Threat model
+Provider-origin claims would require a separately designed and verified
+provider-controlled signature and provider public-key trust boundary. Issuer
+authorization would require governance for identity, scope, enrollment, trust
+ownership, suspension, revocation, and verifier behavior. Neither exists in
+the current audited scope.
 
-LPS is built against adversaries who may:
+## Deferred production controls
 
-- modify visible text after signing
-- strip invisible carriers
-- replay valid provenance onto different text
-- forge manifests or certificates
-- inject malformed or adversarial payloads into text
-- exploit ambiguity in documentation or implementation status
-- exploit differences between encodings, canonicalization rules, or verification behavior across tools
-- flood or poison the registry with invalid records
-- attempt to trigger inconsistent recovery behavior across modules
+The following remain explicit exclusions:
 
-The system should also assume honest failure modes such as network loss, certificate fetch failure, malformed input, Unicode normalization differences, and partial document corruption.
+- production certificate issuer trust, revocation, rotation, and lifecycle
+  governance;
+- production key management and credential isolation;
+- a full canonical-CBOR profile and decoder bounds;
+- broader cryptographic-profile decisions, including P-256 and HMAC/HKDF;
+- formal provider, issuer, and `generating_id` identity semantics; and
+- registry operational controls: SLOs, monitoring, retry policy, incident
+  response, and rollback.
 
-## Security assumptions
-
-The v0.1 baseline assumes:
-
-- the private signing key remains secret
-- the public certificate is trustworthy only after successful validation
-- canonical text extraction is deterministic
-- Node.js built-in crypto behaves according to its documented primitives
-- the implementation uses audited libraries only
-- the registry is not the source of truth; it is a recovery path
-- current v0.1 behavior is the authoritative implementation unless a proposal is explicitly marked as future work
-- canonicalization determinism (which `cbor` encoding behavior produced
-  a given manifest's signed bytes) is currently guaranteed only by
-  `package-lock.json` pinning every environment to the same exact
-  resolved version — not by version-string pinning in `package.json`
-  itself. This is sufficient only as long as the current reference
-  implementation is the sole verifier of its own signatures. It stops
-  being sufficient once dependencies are upgraded and independent
-  parties need to verify manifests signed under a prior version.
-  PROPOSAL 005's cross-copy reconstruction path makes this a harder problem, not just a relevant one: reconstruction requires re-deriving canonical bytes from recovered fragments, and tagging the manifest with a canonicalization-version field creates a circular trust problem — the verifier cannot know which encoder to use without first trusting the field that names it, and cannot trust that field without already having verified it. No resolution is adopted yet. This issue exists regardless of whether A.8R is ultimately adopted. It is fundamentally a canonicalization determinism problem, not an invisible-carrier problem. However, cross-copy reconstruction increases its importance because the verifier must reliably reconstruct the exact signed bytes before verification can succeed. No resolution is adopted yet.
-
-## Invariants
-
-The following must remain true:
-
-- the signature must cover the canonical manifest bytes, not the visible text directly
-- the verification tool must compare the extracted clean text hash against the manifest text hash
-- disclosure of original_manifest in the failed state must be gated by the length-mismatch threshold; a manifest with a missing or unreadable text_length must fail closed (no disclosure) rather than silently falling through to a disclosure decision
-- built features must never be described as future work, and future work must never be described as built
-- algorithm labels must not claim envelope compatibility that the implementation does not provide
-- registry lookup must never be treated as a substitute for signature verification
-- no cryptographic primitive is implemented from scratch
-- no hidden second source of truth is allowed for the same security decision
-- if implementation status is not explicitly marked built, it must be treated as undefined by the codebase and by reviewers
-
-## Non-goals
-
-LPS does not aim to:
-
-- prove that a human personally wrote a span
-- detect AI authorship from text alone
-- survive screenshots, OCR, or heavy rewrite through the embedded carrier alone
-- replace C2PA, SynthID, or other provenance systems
-- provide legal conclusions
-- provide full envelope-level JOSE or COSE interoperability in v0.1
-- solve every registry governance question in the baseline implementation
-
-## Current implementation status
-
-The v0.1 reference implementation includes:
-
-- manifest generation
-- signing
-- embedding
-- verification
-- confidence fallback
-- registry stub behavior for lookup and logging
-
-The following are specified but not built:
-
-- PROPOSAL 005 proposed redundant embedding
-- redundant embedding
-- cross-copy reconstruction
-- future verification states such as anchor_only, partial_recovery, injection_detected, and reconstruction_corrupted
-- production trust-list governance
-- full production registry architecture
-- envelope-level COSE_Sign1 or compact JWS packaging
-
-## Failure handling
-
-If a security check fails, the implementation should prefer explicit failure over silent degradation. The intended outcomes are:
-
-- verified when signature and text hash both match
-- failed when text or signature validation fails
-- degraded when carrier recovery is not possible
-- registry_required when no carrier exists but registry recovery succeeds
-
-Partial future states must never be confused with verified. Future states only describe future architecture unless the corresponding code exists and is tested.
+No production deployment approval follows from successful reference-
+implementation audit evidence.
 
 ## Review posture
 
-A working-group or security reviewer should be able to ask:
+A security review should keep four questions separate:
 
-- what is protected
-- what is trusted
-- what can fail
-- what an attacker can do
-- what the system does not claim
-- what is built today versus only specified
+1. Is the envelope structurally valid and authenticated?
+2. Does the received visible text bind to that record?
+3. If no usable carrier exists, is there only an exact-hash recovery record?
+4. Are production trust, identity, and operational controls separately
+   established?
 
-If any answer is unclear, the document or the implementation is too loose.
+Only the first two can produce in-band verification. The third is explicitly
+degraded recovery; the fourth remains out of scope for the current reference
+implementation.

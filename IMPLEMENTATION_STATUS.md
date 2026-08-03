@@ -1,62 +1,67 @@
 # LPS Implementation Status
 
-This file records the current state of the LPS reference implementation and related planned work. It is meant to stay aligned with the private SPEC, the architecture document, and the public proposal.
+## Current audited baseline
 
-## Current baseline
+The LPS reference implementation is accepted for its audited pipeline scope:
+manifest creation, signing, embedding, compression, verification, and registry
+recovery. This is not working-group ratification, production approval, or a
+claim of interoperability with C2PA, SynthID, or another watermarking system.
 
-The v0.1 reference implementation is built and testable. The core pipeline is complete, and the main security correction on ES256 encoding has been applied.
+This document records implementation and runtime evidence. The precise
+protocol contract is in [`SPEC.md`](SPEC.md); security ownership and production
+exclusions are in [`SECURITY_MODEL.md`](SECURITY_MODEL.md).
 
-## Built and tested
+## Confirmed implementation and validation state
 
-| Area | Status | Notes |
+| Area | Current state | Evidence and boundary |
 |---|---|---|
-| Manifest generation | Built | Produces the LPS manifest from segment input. |
-| Signing layer | Built | Uses Node.js built-in crypto with ES256 / P-256 / SHA-256 and IEEE P1363 raw r‖s encoding. SIGNING_ENABLED environment-variable killswitch enforced as the first statement in signManifest(), before any key access — confirmed working 2026-07-05. Local signing now also refuses to sign when `private.pem` and `cert.pem` are not a matching key pair. |
-| Embedding layer | Built | Uses the current c2pa-text A.8 contiguous invisible Unicode variation-selector carrier. No distributed or redundant carrier is implemented. |
-| Verification tool | Built | Verifies signature, text hash, recovery states, and A.8 extraction only. A.9 structured extraction was removed from the v0.1 verifier. |
-| Registry stub | Built | Supabase-backed stub exists for token/content-hash lookup and logging. |
-| Confidence fallback | Built | Mathematical fallback implemented with confidence source tracking. |
-| Local survival test rig | Built | `lps-local-test-server.mjs` runs the root pipeline locally and records manual editor round-trip results. |
-| Core test suite | Built | Original v0.1 tests pass. |
+| Authenticated envelope | Confirmed | The current outer envelope uses direct `ev: 1`; it does not require `FIELD_MAP.ev`. `content_signed_at` is in the manifest and outer `signed_at` is authenticated. |
+| Text binding | Confirmed | Trailing CR/LF/U+0020 stripping, UTF-8 encoding, SHA-256 hashing, and byte length are used as one text-binding path. |
+| Confidence provenance | Confirmed | `tool` and `fallback` are distinguished. The locked fallback regression object is `{ ai_generated: 82, ai_modified_human: 15, human: 1 }`. |
+| Envelope validation | Confirmed | Duplicate top-level envelope keys return `invalid_envelope / noncanonical_encoding / present` before version routing, cryptography, certificate retrieval, registry access, or fallback. Parseable invalid envelopes do not use registry fallback. |
+| Carrier and registry routing | Confirmed | Valid carriers take normal verification. Absent, corrupted, and unparseable carriers use exact-hash recovery. Exact match, no match, unavailable, and invalid-response outcomes remain distinct. |
+| Registry runtime behavior | Runtime-confirmed | Read-only live exact-match returned `registry_required / registry_match / absent`; read-only live no-match returned `degraded / registry_no_match / absent`. These are not availability or SLO evidence. |
+| Certificate and tamper path | Runtime-confirmed | Verification through the configured allowed HTTPS certificate route succeeded; visible-text tampering returned `text_hash_mismatch`. This confirms the route, fingerprint, and signature path—not issuer governance. |
+| Regression maintenance | Confirmed | `adrIntegration.test.mjs` completed 12 assertion-backed tests. The confidence, signing, and verification regressions were corrected from stale assertions and are assertion-backed. |
 
-## Built but still under review
+## Result-state boundary
 
-| Area | Status | Notes |
-|---|---|---|
-| SPEC wording | In review | Needs consistency pass to ensure the document matches implementation status exactly. |
-| Public proposal text | In review | Must continue to be checked against the implementation and the working-group checklist. |
-| Certificate / registry narrative | In review | The implementation exists, but the long-term production architecture remains separate from the stub. |
+The implementation distinguishes `verified`, `unsupported_version`,
+`invalid_envelope`, `failed`, `registry_required`, and `degraded`. In
+particular, a registry lookup is not normal valid-carrier verification:
 
-## Specified but not yet built
+```text
+valid carrier                 → verified or failed
+parseable invalid envelope    → invalid_envelope; no fallback
+absent/corrupted/unparseable  → exact-hash registry recovery
+exact match                   → registry_required / registry_match
+no match                      → degraded / registry_no_match
+transport or HTTP failure     → degraded / registry_unavailable
+malformed/incomplete response → degraded / registry_response_invalid
+```
 
-| Area | Status | Notes |
-|---|---|---|
-| PROPOSAL 005 | Specified | Conceptual architecture only. A.8R is the current design direction replacing the removed A.9 fallback, but its carrier format, arbitrary-position embedding capability, reconstruction rules, and validation semantics remain under definition and are not implemented. |
-| Anchor manifests | Not built | Defined for future work only. |
-| Cross-copy reconstruction | Not built | Defined for future work only. |
-| anchor_only verification state | Not built | Future output state. |
-| partial_recovery verification state | Not built | Future output state. |
-| injection_detected verification state | Not built | Future output state. |
-| reconstruction_corrupted verification state | Not built | Future output state. |
-| Chunk layer | Not built | Future component for PROPOSAL 005. |
-| Paragraph analysis | Not built | Future component for PROPOSAL 005. |
-| Audit harness | Not built | Future test coverage for PROPOSAL 005. |
-| Production trust-list governance | Not built | Architecture specified, implementation pending. |
-| Full registry production architecture | Not built | Stub exists; production design remains pending. |
+The normative status, reason, and carrier-condition contract belongs to
+[`SPEC.md`](SPEC.md). This summary exists to state what the audit confirmed.
 
-## Security and interoperability status
+## Production-only follow-ups
 
-- ES256 signature encoding mismatch was corrected on June 30 2026.
-- Local signing-material mismatch is now detected before signing, so
-  copy/paste survival failures are not confused with a stale or
-  unrelated `cert.pem`.
-- Primitive-level interoperability has been cross-checked against the panva/jose library.
-- Envelope-level interoperability is not implemented yet.
-- Local survival testing may explicitly allow local `cert.pem`
-  resolution. Production certificate URL policy remains strict.
-- Revocation checking belongs to the production architecture, not the current reference implementation.
-- HMAC-based anchor derivation remains a future architectural decision until PROPOSAL 005 is implemented.
+The following remain deferred and are not audit failures remediated by the
+reference implementation:
+
+- certificate issuer trust, revocation, rotation, and lifecycle governance;
+- production key management, credential isolation, and credential policy;
+- a complete canonical-CBOR profile and decoder resource bounds;
+- broader cryptographic-profile decisions, including P-256 and HMAC/HKDF;
+- provider, issuer, and `generating_id` identity semantics;
+- registry SLOs, monitoring, retries, incident response, and rollback; and
+- provider-attestation and authorized-issuer governance.
+
+Test-only signing material and dotenv usage were suitable only for the audited
+test context. They do not validate production key custody, issuer trust,
+certificate governance, or deployment readiness.
 
 ## Working rule
 
-If a feature is not explicitly marked as built, it must be treated as undefined for the implementation until it is added, tested, and documented.
+Treat a capability as implemented only when this document records the relevant
+audit evidence. Treat every production control listed above as deferred until
+separate policy, implementation, and validation evidence exists.

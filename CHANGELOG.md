@@ -2,11 +2,81 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
+## [2026-08-02] — Audited current-state contract and documentation alignment
+
+- Recorded the audited `ev: 1` outer-envelope contract, distinct authenticated
+  `content_signed_at` and `signed_at` fields, and canonical text binding from
+  trailing CR/LF/U+0020 stripping through UTF-8 bytes, SHA-256, and byte
+  length.
+- Recorded pre-routing duplicate-key rejection as
+  `invalid_envelope / noncanonical_encoding / present`, with no certificate or
+  registry I/O, and preserved the boundary that parseable invalid envelopes do
+  not use recovery fallback.
+- Clarified registry outcomes: exact match is `registry_required /
+  registry_match`; a miss, transport/HTTP failure, and malformed/incomplete
+  response are separate degraded outcomes.
+- Recorded the completed assertion-backed confidence, signing, and verification
+  regression maintenance, including the locked fallback object
+  `{ ai_generated: 82, ai_modified_human: 15, human: 1 }`.
+- Rewrote the public and internal documentation roles around the audited scope.
+  The audit confirms an allowed HTTPS certificate route and read-only registry
+  behavior; it does not establish production trust governance, key management,
+  registry operations, or deployment approval.
+
+> **Historical record:** Entries below predate the 2026-08-02 audited
+> current-state contract. They are retained as dated context and do not
+> override the current documentation on `ev`, timestamps, text binding,
+> confidence provenance, result routing, certificate boundaries, or
+> production exclusions.
+
+## [2026-07-31] — Proposal 007 testing-tool local evidence recorded
+
+Recorded the Proposal 007 testing-tool observations as a separate,
+non-production evidence set. This entry does not change the LPS `ev: 1`
+envelope, selector-carrier, registry, cryptographic, or result contract.
+
+| Test case | Recorded result | Testing-tool result |
+|---|---|---|
+| Firefox/Linux hold-and-drag copy/paste | 100% marker survival in the tested flow | Valid |
+| Firefox/Linux double-click copy/paste | 100% marker survival; no trailing space observed | Valid |
+| Tested BiDi-language content | 100% marker survival despite highlighting glitches | Valid |
+| Malformed sequence | Correct rejection | `E-0-0-2: INVALID_TYPE` |
+| Duplicate header | Correct rejection at normalized index `5` | `E006: DUPLICATE_HEADER` |
+| Orphaned open marker | Correct rejection at normalized index `5` | `E-007: ORPHANED_OPEN` |
+| Orphaned close marker | Correct rejection at normalized index `34` | `E-008: ORPHANED_CLOSE` |
+| Trailing normalization | Correct behavior; 100% marker survival | Valid |
+| Internal codepoints | 100% survival; correctly detected | `E-009: INTERNAL_SIGNAL` |
+
+Documented the observed rendering differences: no glyphs in Linux
+LibreOffice; yellow outlined-square glyphs in Linux VS Code code files only;
+no glyphs in Linux VS Code Markdown/text files; rectangle glyphs in Windows
+VS Code; no glyphs in tested Windows browser flows; and `ƒ{}` in Windows
+OneNote. Visual rendering is not a marker-integrity result without verifier
+evidence of codepoint loss or mutation.
+
+Also recorded the testing-tool direction: headers are document-scoped, the
+embedding tool is required to support different header sizes, Lens 200 remains
+undefined and testing-tool-only, human spans/per-span ordinals/per-span total
+counts remain excluded, and internal codepoints in valid marker context use
+the internal-signal path. Exact error identifiers and normalized indexes remain
+unchanged absent an approved error-catalog change.
+
+Open follow-up remains limited to clipboard-layer causality for trailing
+spaces, broader browser/platform/application paths, BiDi selection and
+codepoint-order effects, versioned glyph-rendering coverage, production marker
+grammar and injection controls, provider-compliance architecture, and Lens 200
+acceptance criteria. No source or test code was changed by this documentation
+record.
+
+Files: `local-files/ADR_4`, `README.md`, `SPEC.md`, `SECURITY_MODEL.md`,
+`public-repo/README.md`, `public-repo/working-group-submission.md`,
+`CHANGELOG.md`.
+
 ## [2026-07-08 9:32pm] — 10kb survival confirmed
 
 Survival testing at 5kb and 10kb manifest sizes confirmed the A.8
 carrier survives copy-paste at both sizes across all editors tested
-in the July 2026 survival study. Verification succeeds at all tested sizes after manual normalization is applied. Google Docs and Word Browser, which append trailing whitespace on copy-out, are recorded as failed in the raw Appendix C.1 transport matrix — the manual normalization step confirmed the manifest survived intact in both cases. Trailing whitespace normalization is not implemented in the v0.1 pipeline. The CHANGELOG entry and the Appendix C.1 table describe different measurement points in the same pipeline. Latency appears above approximately 6,000 variation selectors in rich-text editors that process character-level clipboard payloads — Apple Notes on macOS is the confirmed case at 5kb and above — but latency is not carrier corruption. The 10kb profile is a stress-test scenario, not a production operating range.
+in the July 2026 survival study. Verification succeeds at all tested sizes after manual normalization is applied. Google Docs and Word Browser, which append trailing whitespace on copy-out, are recorded as failed in the raw Appendix C.1 transport matrix — the manual normalization step confirmed the manifest survived intact in both cases. The statement that trailing-whitespace normalization was not implemented is superseded by the 2026-08-02 audited current-state record; this entry remains a dated survival-study observation. Latency appears above approximately 6,000 variation selectors in rich-text editors that process character-level clipboard payloads — Apple Notes on macOS is the confirmed case at 5kb and above — but latency is not carrier corruption. The 10kb profile is a stress-test scenario, not a production operating range.
 
 ## [2026-07-08 7:45pm] — strip rule coverage gap noted
 
@@ -19,22 +89,23 @@ is required before the rule can be considered fully validated
 across platforms. Windows coverage gap tracked
 as a remaining validation item.
 
-## [2026-07-08] — Production cert_url and Appendix A live output
+## [2026-07-08] — Configured HTTPS certificate route and Appendix A live output
 
-### cert_url — production HTTPS URL locked (DEC-P.1)
+### cert_url — configured HTTPS route locked (DEC-P.1)
 signingLayer.mjs: cert_url changed from file:// + process.cwd()
-placeholder to production HTTPS URL:
+placeholder to the configured HTTPS URL:
 https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem
 The file:// path was a local-testing artifact and was never appropriate
-as a permanent value. First full end-to-end pipeline verification under
-the production cert_url confirmed this session: raw.githubusercontent.com
+as a permanent value. The first full end-to-end pipeline verification under
+the configured cert_url confirmed this session: raw.githubusercontent.com
 fetch succeeded, DER fingerprint matched, signature validated, text hash
-matched. All seven tests passing under production conditions.
+matched. This historical result does not establish production conditions or
+certificate-governance readiness.
 Files: signingLayer.mjs
 
 ### testVerification.mjs — allowLocalCert removed from clean case (DEC-P.2)
 allowLocalCert removed from line 57 (J.3 clean verification case).
-Clean case now runs against the production cert_url with no local
+Clean case now runs against the configured HTTPS cert_url with no local
 certificate override. Adversarial and small-edit cases retain
 allowLocalCert: true — their purpose is threshold and disclosure
 logic, not cert fetching.
@@ -43,8 +114,8 @@ Files: testVerification.mjs
 ### working-group-submission.md — Appendix A States 1–3 replaced with live output
 States 1, 2, and 3 in Appendix A replaced with live pipeline output
 from the 2026-07-08T02:38:14.081Z run. State 4 unchanged.
-This is the first Appendix A populated with real verified output
-under production conditions.
+This is the first Appendix A populated with real verified output through the
+configured HTTPS route; it is not production-readiness evidence.
 Files: working-group-submission.md (public repo)
 
 ## [2026-07-08] — cert sync and DER fingerprint fix
@@ -73,7 +144,7 @@ lps-certificates on GitHub was holding the cert generated Jul 6
 05:48:49 UTC. Local cert.pem had been rotated to the 22:55:25 UTC
 version during the genpkey key rotation documented in the Jul 6
 CHANGELOG entry, but was never pushed to lps-certificates. All
-verification attempts against the production cert_url were failing
+verification attempts against the configured HTTPS cert_url were failing
 at the fingerprint check — the fetched cert and the signing cert
 were two different certificates with no key relationship. Fixed by
 pushing the current local cert.pem to lps-certificates.
@@ -81,7 +152,7 @@ No code changes. No schema changes. No test changes.
 
 ## 2026-07-07 — Trailing whitespace normalization and A.9 removal
 
-### Strip rule 
+### Strip rule
 Applied /[\r\n ]+$/ to visible text before text_hash and text_length
 are computed in manifestGenerator.mjs (signing time), and to extracted
 clean text before the received hash is computed in verificationTool.mjs
@@ -100,7 +171,7 @@ Files changed: manifestGenerator.mjs, verificationTool.mjs.
 No migration required — no existing signed manifest in the test
 environment had a trailing strippable character.
 
-### A.9 removal 
+### A.9 removal
 Removed A.9 structured extraction path from verificationTool.mjs.
 Removed: extractStructured import, BEGIN_DELIMITER, END_DELIMITER,
 second try block in extractEmbeddedManifest(), removeStructuredManifestBlock().
@@ -292,18 +363,20 @@ Files changed: verificationTool.mjs.
 - D.3: `anchor_hmac` shortcode deliberately not added to SPEC §4.1's
   dictionary — belongs to PROPOSAL 005, whose key hierarchy is still
   undecided. Revisit once that decision locks.
-- D.4/D.8: `confidence_source` added to all three example segments in
+- D.4/D.8 [historical; superseded for the current contract]:
+  `confidence_source` was added to all three example segments in
   README §3.2; `ai_tool` added to the `s002` example (missing despite
-  the code always producing it). Defining sentence added for all
-  three `confidence_source` values, noting `derived` is schema-
-  defined but not currently emitted.
+  the code always producing it). The then-current documentation described a
+  third `derived` value. The audited current contract recognizes only `tool`
+  and `fallback`.
 - D.5: `anchor_hmac` removed entirely from `compression.mjs` — the
   `FIELD_MAP` entry and both `compress()`/`decompress()` read/write
   lines. Field was never populated by `manifestGenerator.mjs`; no
   document claimed it was implemented, so removal created no new
   discrepancy.
-- D.6: `text_length` field added to the manifest schema
-  (`visibleText.length`, always present, no default-omission).
+- D.6 [historical; superseded for the current contract]: `text_length` field
+  added to the manifest schema. The audited current contract defines it as the
+  byte length of canonical UTF-8 text, not `visibleText.length`.
   Protected by the same signature covering the rest of the manifest.
   `original_manifest` disclosure in the `failed` state now gated by a
   10% length-mismatch threshold in `verificationTool.mjs` STEP 4.
@@ -348,7 +421,7 @@ Files changed: verificationTool.mjs.
 - Implemented registration and lookup by token and content hash.
 - Added registry verification behavior for the `registry_required` state.
 - Introduced usage-event logging for registry queries.
-- Kept the production registry architecture separate from the v0.1 stub.
+- Kept the full operational registry architecture separate from the v0.1 stub.
 
 ## 2026-06-20 — Compression and capacity work
 
@@ -382,7 +455,8 @@ invisible redundant chunk carrier, not standard C2PA Text A.9.
 
 ## 2026-06 — Proposal and research foundation
 
-- Defined LPS as a span-level AI contribution provenance schema for C2PA-compatible text workflows.
+- [Historical; superseded] Defined LPS as a span-level AI contribution
+  provenance schema. It is not a C2PA-compatible workflow claim.
 - Identified the gap between binary AI involvement claims and granular contribution tracking.
 - Separated built v0.1 behavior from future Proposal 005 work.
 - Documented future verification states for redundant embedding and cross-copy reconstruction:
