@@ -4,7 +4,9 @@ and Cross-Copy Reconstruction
 Status: proposed — post-v0.1
 
 ═══════════════════════════════════════════
+
 PROBLEM
+
 ═══════════════════════════════════════════
 
 A.8R distributes one logical manifest as dependent sequential invisible chunks. Partial copy by the user destroys the payload if any required chunk is missing. No reconstruction is possible from partial chunks alone. A single copy embedded once has a single point of failure. This is proposed future work, not a built carrier.
