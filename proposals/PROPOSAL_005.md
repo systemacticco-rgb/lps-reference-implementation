@@ -3,34 +3,26 @@ and Cross-Copy Reconstruction
 
 Status: proposed — post-v0.1
 
-═══════════════════════════════════════════
-
-PROBLEM
-
-═══════════════════════════════════════════
+# PROBLEM
 
 A.8R distributes one logical manifest as dependent sequential invisible chunks. Partial copy by the user destroys the payload if any required chunk is missing. No reconstruction is possible from partial chunks alone. A single copy embedded once has a single point of failure. This is proposed future work, not a built carrier.
 
-═══════════════════════════════════════════
-ARCHITECTURE — TWO LAYERS
-═══════════════════════════════════════════
+# ARCHITECTURE — TWO LAYERS
 
 Layer 1 — Anchor Manifest
 Layer 2 — Overlapping Redundant Full Manifest Copies
 This architecture is conceptual only. It describes the intended direction of future work. The carrier format, arbitrary-position embedding capability, reconstruction contract, and validation rules have not yet been finalized or implemented.
 
-═══════════════════════════════════════════
-LAYER 1 — ANCHOR MANIFEST
-═══════════════════════════════════════════
+## LAYER 1 — ANCHOR MANIFEST
 
 A minimal manifest embedded at the start of every paragraph.
 Contains document-level fields only:
 
-  text_hash
-  overall_ai_proportion
-  human_proportion
-  algorithm
-  signed_at
+  - text_hash
+  - overall_ai_proportion
+  - human_proportion
+  - algorithm
+  - signed_at
 
 No segment array. No signature. No cert.
 Designed to remain well within the conservative A.8 payload range used by the current reference implementation. There is no protocol-defined A.8 size ceiling; larger invisible payloads primarily reduce editor-survival probability rather than violating the protocol itself.
@@ -47,9 +39,7 @@ Purpose:
 Embedded using A.8 — one block per paragraph start character.
 Number of anchors = number of paragraphs in document.
 
-═══════════════════════════════════════════
-LAYER 2 — OVERLAPPING REDUNDANT FULL MANIFEST COPIES
-═══════════════════════════════════════════
+# LAYER 2 — OVERLAPPING REDUNDANT FULL MANIFEST COPIES
 
 Multiple complete copies of the full signed manifest embedded 
 using a proposed A.8R redundant invisible chunk carrier. The exact carrier grammar, embedding mechanism, extraction rules, and reconstruction semantics remain under design and are not part of the current implementation.
@@ -81,9 +71,7 @@ attached to different visible characters in different paragraphs.
 Deleting one paragraph cannot destroy both copies of any
 overlapping chunk.
 
-═══════════════════════════════════════════
-CHUNK STRUCTURE
-═══════════════════════════════════════════
+# CHUNK STRUCTURE
 
 The following structure is a proposed grammar, not a finalized wire format. Header fields, serialization, and validation behavior remain subject to implementation review and working-group feedback.
 
@@ -103,9 +91,7 @@ The seq number is the universal identifier. Two chunks with
 the same seq number from different copy_ids carry identical
 payload bytes. The verifier treats them as interchangeable.
 
-═══════════════════════════════════════════
-RECONSTRUCTION LOGIC
-═══════════════════════════════════════════
+# RECONSTRUCTION LOGIC
 
 This reconstruction algorithm is illustrative. Final behavior depends on the carrier format ultimately adopted for A.8R.
 s
@@ -147,9 +133,7 @@ If no chunks found anywhere:
   If no anchors — check registry.
   If registry empty — return degraded.
 
-═══════════════════════════════════════════
-VERIFICATION STATUS — NEW STATES
-═══════════════════════════════════════════
+# VERIFICATION STATUS — NEW STATES
 
 anchor_only
   No full manifest copy recoverable.
@@ -166,9 +150,7 @@ partial_recovery
   across multiple copies. Not all seq positions filled.
   Returns: only fields that can be reconstructed deterministically, list of missing seq positions, and a note that signature verification did not run. No field should be returned unless its correctness can be established independently from the missing data.
 
-═══════════════════════════════════════════
-SURVIVAL SCENARIOS
-═══════════════════════════════════════════
+# SURVIVAL SCENARIOS
 
 User copies one full paragraph:
   One complete copy recovered. Full verification runs.
@@ -200,9 +182,7 @@ Adversarial targeted removal:
   Status after partial removal: partial_recovery exposes
   the attempt — missing seq positions are reported explicitly.
 
-═══════════════════════════════════════════
-CONSTRAINTS — UPDATED WITH COUNTERS
-═══════════════════════════════════════════
+# CONSTRAINTS — UPDATED WITH COUNTERS
 
 HMAC key derivation:
   HMAC key material is derived using Node's built-in
@@ -355,9 +335,7 @@ Position parameter confirmation — see appendix gap 2.
 Fixed 25% overlap is the spec value for v0.1.
   Not configurable at runtime.
 
-═══════════════════════════════════════════
-CONNECTS TO
-═══════════════════════════════════════════
+# CONNECTS TO
 
 PROPOSAL 001 — Notarization Registry
 Section 4 — Embedding Layer
