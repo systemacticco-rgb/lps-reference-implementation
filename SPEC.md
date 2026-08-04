@@ -90,6 +90,7 @@ reference-implementation mechanism, not a standards-conformance claim.
 
 **Algorithm**: es256 (internal LPS label for ECDSA P-256, SHA-256, raw r‖s)
 Library: Node.js built-in crypto module (no install required)
+
 **Signature encoding**: IEEE P1363 (raw r‖s, 64 bytes fixed for P-256).
   The JOSE identifier "ES256" uses raw r‖s bytes; COSE identifies
   the related primitive as algorithm -7. The LPS string es256 is neither
@@ -98,13 +99,17 @@ Library: Node.js built-in crypto module (no install required)
   { key, dsaEncoding: 'ieee-p1363' } to both createSign().sign()
   and createVerify().verify() calls. This implementation detail does not
   establish independent primitive, JWS, COSE, or envelope interoperability.
+  
 **Note**: c2pa-text is used in component 3 (embedding layer) only,
       not for signing. Signing uses native crypto exclusively.
       @contentauth/c2pa-node is listed in package.json but is
       not imported by the embedding layer directly.
+      
 **Note**: use @contentauth/c2pa-node only for the embedding layer.
       Do not use the original c2pa-node package.
+      
 **Key format**: PEM
+
 **Certificate generation commands**:
 [UPDATED — 2026-07-06] Canonical key generation — named-curve PKCS#8.
 Prior commands used openssl ecparam which produces explicit-parameters
@@ -140,7 +145,7 @@ cert_fingerprint — SHA-256 hash of the certificate content.
 The verification tool fetches the certificate, computes a SHA-256 hash of its DER-encoded bytes (X509Certificate.raw — not the PEM string), confirms it matches cert_fingerprint, then uses it to verify the signature. The signing layer computes cert_fingerprint the same way at sign time. Both sides must use DER bytes or the comparison is sensitive to PEM text encoding differences across platforms and network responses.
 Repo: systemacticco-rgb/lps-certificates (public)
 
-Constraints:
+**Constraints**:
 - Never implement signing logic manually
 - Key material never logged, never hardcoded, never in client-accessible variables
 - Signing and verification are separate files, separate functions,
@@ -157,7 +162,7 @@ Constraints:
   prevents the local pipeline from producing manifests signed by one key
   while advertising an unrelated certificate.
 
-Why not a C2PA media library for signing:
+**Why not a C2PA media library for signing**:
 @contentauth/c2pa-node is designed to sign media files — images,
 video, audio. It embeds C2PA manifests into binary media containers.
 LPS signs JSON text manifests, not media files. Node.js built-in
