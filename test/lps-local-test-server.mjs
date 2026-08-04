@@ -1,16 +1,14 @@
 // ============================================================
-// lps-local-test-server.mjs — local end-to-end test rig
+// test/lps-local-test-server.mjs — local end-to-end test rig
 // ============================================================
-// Drop this file in the repository ROOT (same folder as
-// manifestGenerator.mjs, embeddingLayer.mjs, verificationTool.mjs,
-// signingLayer.mjs, compression.mjs, registryClient.mjs).
+// This test rig lives in test/ and imports the pipeline from main-pipeline/.
 //
-// Run:   node lps-local-test-server.mjs
+// Run:   node test/lps-local-test-server.mjs
 // Open:  http://localhost:4173
 //
 // VERIFY side calls your real verifyManifest() — works now.
 // EMBED side calls generateManifest -> signingLayer -> embedManifest.
-//   It dynamic-imports signingLayer.mjs and looks for an exported
+//   It dynamic-imports main-pipeline/signingLayer.mjs and looks for an exported
 //   sign function. 
 //   tell me the correct name (no crash, server still boots).
 //
@@ -20,9 +18,9 @@
 
 import { createServer } from 'http';
 import { appendFileSync } from 'fs';
-import { generateManifest } from './manifestGenerator.mjs';
-import { embedManifestWithDiagnostics } from './embeddingLayer.mjs';
-import { verifyManifest } from './verificationTool.mjs';
+import { generateManifest } from '../main-pipeline/manifestGenerator.mjs';
+import { embedManifestWithDiagnostics } from '../main-pipeline/embeddingLayer.mjs';
+import { verifyManifest } from '../main-pipeline/verificationTool.mjs';
 
 const PORT = 4173;
 
@@ -40,9 +38,9 @@ function json(res, code, obj) {
   res.end(JSON.stringify(obj));
 }
 
-// Resolve the signing function from signingLayer.mjs without knowing its exact name
+// Resolve the signing function from main-pipeline/signingLayer.mjs without knowing its exact name
 async function resolveSigner() {
-  const mod = await import('./signingLayer.mjs');
+  const mod = await import('../main-pipeline/signingLayer.mjs');
   const candidate = mod.signManifest || mod.sign || mod.signLayer || mod.default;
   return { fn: typeof candidate === 'function' ? candidate : null, exported: Object.keys(mod) };
 }
@@ -90,7 +88,7 @@ const server = createServer(async (req, res) => {
       const { fn, exported } = await resolveSigner();
       if (!fn) {
         return json(res, 200, {
-          error: 'Could not find a sign function in signingLayer.mjs',
+          error: 'Could not find a sign function in main-pipeline/signingLayer.mjs',
           hint: 'Tell me which of these is the signer (or paste its export line):',
           exports: exported,
           unsigned_manifest: manifest,

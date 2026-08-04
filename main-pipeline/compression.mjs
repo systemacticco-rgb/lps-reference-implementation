@@ -1,5 +1,5 @@
 // ============================================================
-// compression.mjs — Shortcode compression utility
+// main-pipeline/compression.mjs — Shortcode compression utility
 // ============================================================
 // Two functions: compress and decompress.
 // compress: replaces full field names with shortcodes before embedding.

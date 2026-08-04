@@ -92,7 +92,7 @@ as a remaining validation item.
 ## [2026-07-08] — Configured HTTPS certificate route and Appendix A live output
 
 ### cert_url — configured HTTPS route locked (DEC-P.1)
-signingLayer.mjs: cert_url changed from file:// + process.cwd()
+main-pipeline/signingLayer.mjs: cert_url changed from file:// + process.cwd()
 placeholder to the configured HTTPS URL:
 https://raw.githubusercontent.com/systemacticco-rgb/lps-certificates/main/cert.pem
 The file:// path was a local-testing artifact and was never appropriate
@@ -101,15 +101,15 @@ the configured cert_url confirmed this session: raw.githubusercontent.com
 fetch succeeded, DER fingerprint matched, signature validated, text hash
 matched. This historical result does not establish production conditions or
 certificate-governance readiness.
-Files: signingLayer.mjs
+Files: main-pipeline/signingLayer.mjs
 
-### testVerification.mjs — allowLocalCert removed from clean case (DEC-P.2)
+### test/testVerification.mjs — allowLocalCert removed from clean case (DEC-P.2)
 allowLocalCert removed from line 57 (J.3 clean verification case).
 Clean case now runs against the configured HTTPS cert_url with no local
 certificate override. Adversarial and small-edit cases retain
 allowLocalCert: true — their purpose is threshold and disclosure
 logic, not cert fetching.
-Files: testVerification.mjs
+Files: test/testVerification.mjs
 
 ### working-group-submission.md — Appendix A States 1–3 replaced with live output
 States 1, 2, and 3 in Appendix A replaced with live pipeline output
@@ -121,7 +121,7 @@ Files: working-group-submission.md (public repo)
 ## [2026-07-08] — cert sync and DER fingerprint fix
 
 ### cert_fingerprint — DER bytes replacing PEM-string hash
-signingLayer.mjs line 75 and verificationTool.mjs line 140 were
+main-pipeline/signingLayer.mjs line 75 and main-pipeline/verificationTool.mjs line 140 were
 computing cert_fingerprint by hashing the PEM string (certificate
 text including headers and line breaks). Replaced with
 X509Certificate.raw (DER bytes) on both sides. DER is the binary
@@ -131,13 +131,13 @@ PEM file is encoded, stored, or served. PEM-string hashing was
 sensitive to line-ending differences between local disk reads and
 GitHub fetch responses, which would produce a fingerprint mismatch
 on any cert rotation where file encoding varied.
-X509Certificate added to crypto import in verificationTool.mjs.
-Already present in signingLayer.mjs — no import change needed.
+X509Certificate added to crypto import in main-pipeline/verificationTool.mjs.
+Already present in main-pipeline/signingLayer.mjs — no import change needed.
 Breaking: manifests signed before this commit carry a cert_fingerprint
 computed from PEM-string hashing and will not verify against this
 code. No migration required — no distributed signed documents exist
 at v0.1.
-Files: signingLayer.mjs, verificationTool.mjs
+Files: main-pipeline/signingLayer.mjs, main-pipeline/verificationTool.mjs
 
 ### lps-certificates repo — stale cert replaced
 lps-certificates on GitHub was holding the cert generated Jul 6
@@ -154,8 +154,8 @@ No code changes. No schema changes. No test changes.
 
 ### Strip rule
 Applied /[\r\n ]+$/ to visible text before text_hash and text_length
-are computed in manifestGenerator.mjs (signing time), and to extracted
-clean text before the received hash is computed in verificationTool.mjs
+are computed in main-pipeline/manifestGenerator.mjs (signing time), and to extracted
+clean text before the received hash is computed in main-pipeline/verificationTool.mjs
 (verification time). Both sides apply identically.
 
 Empirical basis: editor survival matrix of 37 runs across 13 editors,
@@ -167,12 +167,12 @@ July 7 2026. Trailing characters observed from automatic editor behavior:
 No U+00A0, U+000D, or other character observed. \r included as
 zero-cost conservative addition for untested Windows Word.
 
-Files changed: manifestGenerator.mjs, verificationTool.mjs.
+Files changed: main-pipeline/manifestGenerator.mjs, main-pipeline/verificationTool.mjs.
 No migration required — no existing signed manifest in the test
 environment had a trailing strippable character.
 
 ### A.9 removal
-Removed A.9 structured extraction path from verificationTool.mjs.
+Removed A.9 structured extraction path from main-pipeline/verificationTool.mjs.
 Removed: extractStructured import, BEGIN_DELIMITER, END_DELIMITER,
 second try block in extractEmbeddedManifest(), removeStructuredManifestBlock().
 A.8 is now the only extraction path.
@@ -183,38 +183,38 @@ tampering, not a legitimate alternate path. The fallback created a
 scenario where evidence of stripping produced a passing verification
 result. Removing it closes that gap.
 
-Files changed: verificationTool.mjs.
+Files changed: main-pipeline/verificationTool.mjs.
 
 ### Trailing artifact instrumentation and verification log
 Added trailing_artifact field to buildSurvivalAnalysis() in
-lps-local-test-server.mjs. Records raw characters and Unicode code
+test/lps-local-test-server.mjs. Records raw characters and Unicode code
 points of any text appended after signed_text_length in the extracted
 clean text. Appends each survival row as JSONL to verification-log.jsonl
 in the repository root after every /api/verify call. verification-log.jsonl
 added to .gitignore. README.md updated with local testing note.
 
-Files changed: lps-local-test-server.mjs, .gitignore, README.md.
+Files changed: test/lps-local-test-server.mjs, .gitignore, README.md.
 
 ### clean_text exposure
 Added clean_text field to verified return (STEP 5) and both failed
-hash-mismatch returns (STEP 4) in verificationTool.mjs. Required for
+hash-mismatch returns (STEP 4) in main-pipeline/verificationTool.mjs. Required for
 trailing_artifact computation in the local test rig.
 
-Files changed: verificationTool.mjs.
+Files changed: main-pipeline/verificationTool.mjs.
 
 ## 2026-07-06 — Local survival-analysis rig moved to root pipeline
 
 - Removed dependency on the stale `survival-test-tool` demo path. Local
   survival testing now uses the root `generateManifest -> signManifest ->
   embedManifest -> verifyManifest` pipeline through
-  `lps-local-test-server.mjs`.
+  `test/lps-local-test-server.mjs`.
 - Corrected the root embed path to keep using `c2pa-text` A.8 invisible
   Unicode variation selectors for local editor survival testing. A.9
   structured extraction remains supported by the verifier for compatibility,
   but the local copy path no longer falls back to a visible ASCII-armour
   comment block.
   Superseded by 2026-07-07: A.9 extraction path removed entirely
-  from verificationTool.mjs. A.8 is now the only extraction path.
+  from main-pipeline/verificationTool.mjs. A.8 is now the only extraction path.
   The compatibility statement above no longer reflects current
   behavior. See 2026-07-07 entry.
 - Superseded the earlier 220-byte A.8 fallback threshold assumption. With the
@@ -224,15 +224,15 @@ Files changed: verificationTool.mjs.
   option. Production verification remains HTTPS allowlist based; the local
   server opts into local `cert.pem` resolution so manual editor tests do not
   depend on internet certificate fetches.
-- Updated `lps-local-test-server.mjs` to return embedding diagnostics and a
+- Updated `test/lps-local-test-server.mjs` to return embedding diagnostics and a
   survival-analysis row containing editor, platform, copy path, status,
   reason, text lengths, recovered embedding method, and disclosure outcome.
-- Updated `testVerification.mjs` to use the root signer again after removal
+- Updated `test/testVerification.mjs` to use the main-pipeline signer again after removal
   of the demo survival-test-tool folder.
 
 ## 2026-07-06 — Local signing-material mismatch guard
 
-- Added a pre-signing consistency check in `signingLayer.mjs` to confirm
+- Added a pre-signing consistency check in `main-pipeline/signingLayer.mjs` to confirm
   that `private.pem` and `cert.pem` are a matching key pair before any
   signature is produced. A mismatch now fails closed with
   `Signing material mismatch: private.pem does not match cert.pem`.
@@ -267,8 +267,8 @@ Files changed: verificationTool.mjs.
   carried the same explicit-parameters encoding as the original key.
   Public key in new certificate confirmed matching. Updated certificate
   pushed to `systemacticco-rgb/lps-certificates` main branch.
-- Full test suite confirmed passing after swap: testSigning.mjs and
-  testVerification.mjs all pass including SIGNING_ENABLED killswitch,
+- Full test suite confirmed passing after swap: test/testSigning.mjs and
+  test/testVerification.mjs all pass including SIGNING_ENABLED killswitch,
   evaluateDisclosureThreshold unit tests, clean verification, adversarial
   tamper, and small-edit disclosure cases.
 - Canonical key generation command recorded in SPEC §3 and README key
@@ -280,7 +280,7 @@ Files changed: verificationTool.mjs.
 
 ## 2026-07-04 (7:31pm) — Disclosure-threshold call-site defect fixed
 
-- Found: the disclose-branch in `verificationTool.mjs` STEP 4 contained
+- Found: the disclose-branch in `main-pipeline/verificationTool.mjs` STEP 4 contained
   a dead duplicate of `evaluateDisclosureThreshold()`'s decision logic —
   a second `lengthDelta`/`withinThreshold` computation using
   `receivedLength`/`signedLength`, names that were never declared in
@@ -298,7 +298,7 @@ Files changed: verificationTool.mjs.
 - Fix: removed the dead duplicate entirely. The call site now returns
   directly on `evaluateDisclosureThreshold()`'s `disclose: true` result
   with no recomputation. One source of truth for this decision.
-- Tests: two new pipeline-level cases added to `testVerification.mjs`,
+- Tests: two new pipeline-level cases added to `test/testVerification.mjs`,
   both run through the real `generateManifest → signManifest →
   embedManifest → verifyManifest` pipeline, not the isolated pure-
   function calls:
@@ -310,7 +310,7 @@ Files changed: verificationTool.mjs.
     only logged output with no assertion; it now asserts explicitly.
 ## 2026-07-05 (later) — Run 1 assertion strengthened to check segment content
 
-- Found: testVerification.mjs's Run 1 assertion (the clean-verification
+- Found: test/testVerification.mjs's Run 1 assertion (the clean-verification
   case) only checked that `result.status === 'verified'` and that
   `result.segments` was an array. It did not check what was inside
   that array. A pipeline bug that scrambled segment values — wrong
@@ -321,7 +321,7 @@ Files changed: verificationTool.mjs.
   `segment_id`, `origin`, `start_offset`, `end_offset`, `confidence`,
   and `ai_tool` against the known input values used to build the test
   manifest.
-- Along the way: confirmed that `manifestGenerator.mjs` intentionally
+- Along the way: confirmed that `main-pipeline/manifestGenerator.mjs` intentionally
   normalizes confidence to a 0–100 integer scale — a 0–1 decimal input
   like 0.95 is detected and converted to 95. This is existing, correct
   behavior, not a defect. The first version of this stronger assertion
@@ -333,11 +333,11 @@ Files changed: verificationTool.mjs.
 ## 2026-07-03 (11:18pm) — Disclosure-threshold testability refactor
 - Extracted the D.6 length-mismatch disclosure decision out of
   `verifyManifest()`'s inline STEP 4 logic into a standalone exported
-  function, `evaluateDisclosureThreshold()`, in `verificationTool.mjs`.
+  function, `evaluateDisclosureThreshold()`, in `main-pipeline/verificationTool.mjs`.
 - Reason: the inline version could not be unit-tested directly — no
   real pipeline input produces a manifest missing `text_length`, so
   that edge case was untestable without this extraction.
-- Added 8 direct unit test cases to `testVerification.mjs`: missing
+- Added 8 direct unit test cases to `test/testVerification.mjs`: missing
   `text_length` (undefined and null), within-threshold (5% delta),
   the exact 10% boundary (inclusive, both sides), exceeds-threshold
   (20% delta and just-over-boundary), and zero-length signed text
@@ -352,11 +352,11 @@ Files changed: verificationTool.mjs.
 ## 2026-07-03 — D.1–D.7 discrepancy audit fixes
 - D.1: `content_hash` format validation (64 lowercase hex) and a
   minimal safety-only `generating_id` check (printable ASCII, 1–128
-  chars) implemented in `registryClient.mjs` ahead of the Supabase
+  chars) implemented in `main-pipeline/registryClient.mjs` ahead of the Supabase
   insert. The `generating_id` structural schema question (opaque
   token vs. structured identifier) was explicitly left open and
   deferred to working-group input — see SPEC.md §9.
-- D.2: `compression.mjs`'s `compress()` now omits `lv`/`st` when they
+- D.2: `main-pipeline/compression.mjs`'s `compress()` now omits `lv`/`st` when they
   match v0.1 defaults; `decompress()` fills defaults on absence.
   Brings code in line with what README §3.2 and SPEC §4.1 already
   claimed.
@@ -369,9 +369,9 @@ Files changed: verificationTool.mjs.
   the code always producing it). The then-current documentation described a
   third `derived` value. The audited current contract recognizes only `tool`
   and `fallback`.
-- D.5: `anchor_hmac` removed entirely from `compression.mjs` — the
+- D.5: `anchor_hmac` removed entirely from `main-pipeline/compression.mjs` — the
   `FIELD_MAP` entry and both `compress()`/`decompress()` read/write
-  lines. Field was never populated by `manifestGenerator.mjs`; no
+  lines. Field was never populated by `main-pipeline/manifestGenerator.mjs`; no
   document claimed it was implemented, so removal created no new
   discrepancy.
 - D.6 [historical; superseded for the current contract]: `text_length` field
@@ -379,8 +379,8 @@ Files changed: verificationTool.mjs.
   byte length of canonical UTF-8 text, not `visibleText.length`.
   Protected by the same signature covering the rest of the manifest.
   `original_manifest` disclosure in the `failed` state now gated by a
-  10% length-mismatch threshold in `verificationTool.mjs` STEP 4.
-  Shortcode `tl` added to `compression.mjs`. README §3.2 and SPEC
+  10% length-mismatch threshold in `main-pipeline/verificationTool.mjs` STEP 4.
+  Shortcode `tl` added to `main-pipeline/compression.mjs`. README §3.2 and SPEC
   §4.1 updated. "Transfer/replay" threat model entry upgraded from
   PARTIALLY DEFENDED to DEFENDED.
 - D.7: SPEC §6's `generating_id` pattern text corrected to match the
@@ -481,7 +481,7 @@ invisible redundant chunk carrier, not standard C2PA Text A.9.
 - SPEC §3 line retagged [BUILT — 2026-07-05], closing the tagging
   gap where an unmarked invariant sat in a SECURITY-CRITICAL section
   with no enforcement.
-- Test coverage: three cases added to testSigning.mjs — unset,
+- Test coverage: three cases added to test/testSigning.mjs — unset,
   explicitly 'false', and 'true'. First two assert the exact
   killswitch error message and confirm the guard fires by strict
   string equality (not truthy/falsy — '1', 'yes', and '' all fail

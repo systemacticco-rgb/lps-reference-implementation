@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { embedManifest } from './embeddingLayer.mjs';
-import { signManifest } from './signingLayer.mjs';
-import { generateManifest } from './manifestGenerator.mjs';
-import { verifyManifest } from './verificationTool.mjs';
+import { embedManifest } from '../main-pipeline/embeddingLayer.mjs';
+import { signManifest } from '../main-pipeline/signingLayer.mjs';
+import { generateManifest } from '../main-pipeline/manifestGenerator.mjs';
+import { verifyManifest } from '../main-pipeline/verificationTool.mjs';
 
 const visibleText = 'This is human written. This part was AI generated.';
 const contentSignedAt = '2026-08-02T00:00:00.000Z';
@@ -28,7 +28,7 @@ try {
 
   const signedManifest = signManifest(manifest);
   const embeddedText = embedManifest(visibleText, signedManifest);
-  const localCertificate = readFileSync(new URL('./cert.pem', import.meta.url), 'utf8');
+  const localCertificate = readFileSync(new URL('../cert.pem', import.meta.url), 'utf8');
   let certificateFetches = 0;
 
   globalThis.fetch = async (input) => {

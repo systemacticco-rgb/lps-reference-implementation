@@ -27,13 +27,13 @@ interoperability, or conformance with another AI-watermarking system.
 
 | Component | Responsibility | Architectural boundary |
 |---|---|---|
-| `manifestGenerator.mjs` | Builds the inner manifest from visible text and segments. | Applies the LPS trailing CR/LF/U+0020 strip and derives both `text_hash` and `text_length` from the resulting UTF-8 bytes. It holds `content_signed_at` and confidence provenance. |
-| `confidenceFallback.mjs` | Provides confidence only when it was not supplied. | The current contract distinguishes `tool` from `fallback`; a fallback value is not tool-supplied evidence. |
-| `signingLayer.mjs` | Creates the authenticated outer envelope. | Emits direct outer `ev: 1` and outer `signed_at`; both it and the inner manifest fields are authenticated. |
-| `compression.mjs` | Encodes and decodes the envelope for carriage. | Preserves direct outer `ev`; the version field is not a `FIELD_MAP` entry. |
-| `embeddingLayer.mjs` | Carries and extracts the encoded envelope without changing visible text. | The carrier is transport, not proof; visible text remains independently bound by hash and byte length. |
-| `verificationTool.mjs` | Classifies carrier state, validates the envelope, verifies it, checks text binding, and routes the result. | It rejects duplicate top-level envelope keys before version routing, cryptography, certificate retrieval, registry access, or fallback. |
-| `registryClient.mjs` | Looks up and validates exact canonical-text-hash recovery records. | Registry data corroborates an exact hash only; it is not issuer authentication or a normal valid-carrier dependency. |
+| `main-pipeline/manifestGenerator.mjs` | Builds the inner manifest from visible text and segments. | Applies the LPS trailing CR/LF/U+0020 strip and derives both `text_hash` and `text_length` from the resulting UTF-8 bytes. It holds `content_signed_at` and confidence provenance. |
+| `main-pipeline/confidenceFallback.mjs` | Provides confidence only when it was not supplied. | The current contract distinguishes `tool` from `fallback`; a fallback value is not tool-supplied evidence. |
+| `main-pipeline/signingLayer.mjs` | Creates the authenticated outer envelope. | Emits direct outer `ev: 1` and outer `signed_at`; both it and the inner manifest fields are authenticated. |
+| `main-pipeline/compression.mjs` | Encodes and decodes the envelope for carriage. | Preserves direct outer `ev`; the version field is not a `FIELD_MAP` entry. |
+| `main-pipeline/embeddingLayer.mjs` | Carries and extracts the encoded envelope without changing visible text. | The carrier is transport, not proof; visible text remains independently bound by hash and byte length. |
+| `main-pipeline/verificationTool.mjs` | Classifies carrier state, validates the envelope, verifies it, checks text binding, and routes the result. | It rejects duplicate top-level envelope keys before version routing, cryptography, certificate retrieval, registry access, or fallback. |
+| `main-pipeline/registryClient.mjs` | Looks up and validates exact canonical-text-hash recovery records. | Registry data corroborates an exact hash only; it is not issuer authentication or a normal valid-carrier dependency. |
 
 ## Generation path
 

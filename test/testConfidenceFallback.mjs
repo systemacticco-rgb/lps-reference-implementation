@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { calculateFallbackConfidence } from './confidenceFallback.mjs';
+import { calculateFallbackConfidence } from '../main-pipeline/confidenceFallback.mjs';
 
 const segments = [
   { segmentId: 's001', startOffset: 0,   endOffset: 20,  origin: 'ai_generated' },

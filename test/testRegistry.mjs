@@ -1,8 +1,8 @@
-import { registerContent, queryRegistry } from './registryClient.mjs';
+import { registerContent, queryRegistry } from '../main-pipeline/registryClient.mjs';
 
 /*
  * [K.1] WHAT THIS FILE DOES
- * This test exercises registryClient.mjs in complete isolation —
+ * This test exercises main-pipeline/registryClient.mjs in complete isolation —
  * no manifest, no signing, no embedding.
  * It tests the database layer directly: write a record, then read it
  * back three different ways, then confirm the two failure states
@@ -62,7 +62,7 @@ console.log('Found by token:', byToken);
 /*
  * [K.4] TEST 3 — queryRegistry() by contentHash
  * Uses the content hash to look up the same row — no token provided.
- * This is the path verificationTool.mjs uses when it finds no embedded signal:
+ * This is the path main-pipeline/verificationTool.mjs uses when it finds no embedded signal:
  * hash the received text, query by hash, check if a record exists.
  *
  * What to look for: same record again. Identical to Tests 1 and 2.
@@ -78,12 +78,12 @@ console.log('Found by hash:', byHash);
  * [K.5] TEST 4 — queryRegistry() with a token that does not exist
  * Passes a token that was never registered — "lps_doesnotexist".
  * The database query returns no rows. Error code PGRST116 is returned
- * by Supabase. registryClient.mjs catches that specific code and
+ * by Supabase. main-pipeline/registryClient.mjs catches that specific code and
  * returns null instead of throwing.
  *
  * What to look for: "Not found result: null"
  * null is the correct and expected output here — not an error, not a crash.
- * This is the signal verificationTool.mjs uses to decide between
+ * This is the signal main-pipeline/verificationTool.mjs uses to decide between
  * registry_required and degraded. Null means: no record exists.
  * The degraded state is appropriate.
  */
@@ -95,7 +95,7 @@ console.log('Not found result:', notFound);
 /*
  * [K.6] TEST 5 — queryRegistry() with no arguments
  * Passes an empty object — no token, no contentHash.
- * registryClient.mjs has an explicit guard for this:
+ * main-pipeline/registryClient.mjs has an explicit guard for this:
  * if neither field is provided, it throws immediately with a clear message
  * before any database query runs.
  *

@@ -1,4 +1,4 @@
-// confidenceFallback.mjs
+// main-pipeline/confidenceFallback.mjs
 // Calculates fallback confidence values from segment character distribution.
 // Called by generateManifest() when a segment arrives with no confidence value.
 // Never called directly in production — generateManifest() is the entry point.

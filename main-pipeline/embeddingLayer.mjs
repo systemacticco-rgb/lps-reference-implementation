@@ -1,5 +1,5 @@
 // ============================================================
-// embeddingLayer.mjs 
+// main-pipeline/embeddingLayer.mjs 
 // ============================================================
 import {
   embedManifest as embedIntoText,

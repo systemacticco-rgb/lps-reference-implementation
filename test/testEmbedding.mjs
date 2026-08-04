@@ -1,8 +1,8 @@
-import { generateManifest } from './manifestGenerator.mjs';
-import { signManifest } from './signingLayer.mjs';
-import { embedManifest } from './embeddingLayer.mjs';
+import { generateManifest } from '../main-pipeline/manifestGenerator.mjs';
+import { signManifest } from '../main-pipeline/signingLayer.mjs';
+import { embedManifest } from '../main-pipeline/embeddingLayer.mjs';
 import { extractManifest } from 'c2pa-text';
-import { decompress, decodeFromCBOR } from './compression.mjs';
+import { decompress, decodeFromCBOR } from '../main-pipeline/compression.mjs';
 import assert from 'node:assert/strict';
 /*
  * [I.1] WHAT THIS FILE DOES
@@ -32,7 +32,7 @@ const visibleText = "This is a test sentence written by a human. The rest was ge
  * [I.3] BUILDING THE MANIFEST — STAGE 1
  * generateManifest() runs exactly as it would in production.
  * Two segments: human (0–44) and ai_generated (45–end).
- * new Date().toISOString() produces a live timestamp — unlike testManifest.mjs
+ * new Date().toISOString() produces a live timestamp — unlike test/testManifest.mjs
  * which used a fixed date, this test uses the actual current time.
  * The text hash produced here will be unique to this exact visibleText string.
  */
@@ -123,7 +123,7 @@ assert.ok(extracted.manifest);
  * not just the inner manifest data, but the cryptographic wrapper around it.
  *
  * The summary block below prints four values for visual confirmation:
- *   Algorithm     — should match what signingLayer.mjs set ("es256").
+ *   Algorithm     — should match what main-pipeline/signingLayer.mjs set ("es256").
  *   Signed at     — the ISO timestamp from when signManifest() ran.
  *   Segments      — should be 2, matching the two segments defined above.
  *   Signature present — true confirms the cryptographic seal survived.

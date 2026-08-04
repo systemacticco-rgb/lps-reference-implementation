@@ -1,4 +1,4 @@
-import { registerContent } from './registryClient.mjs';
+import { registerContent } from '../main-pipeline/registryClient.mjs';
 
 /*
  * [Registry input validation] contentHash and generatingId checks

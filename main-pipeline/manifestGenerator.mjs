@@ -1,5 +1,5 @@
 // ============================================================
-// manifestGenerator.mjs 
+// main-pipeline/manifestGenerator.mjs 
 // ============================================================
 import { createHash } from 'crypto';
 import { calculateFallbackConfidence } from './confidenceFallback.mjs';

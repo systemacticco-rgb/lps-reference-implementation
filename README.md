@@ -39,21 +39,27 @@ distilled document — not sharing this repository as-is.
 
 ```
 lps-reference-implementation/
-├── manifestGenerator.mjs         Stage 1 — manifest generation
-├── signingLayer.mjs              Stage 2 — ECDSA P-256 signing
-├── embeddingLayer.mjs            Stage 3 — Unicode carrier embedding
-├── verificationTool.mjs          Stage 4 — extraction and verification
-├── compression.mjs               Shortcode compression + CBOR encode/decode
-├── registryClient.mjs            Supabase registry stub (register + query)
-├── confidenceFallback.mjs        Mathematical fallback confidence derivation
-├── testManifest.mjs              Stage 1 test
-├── testSigning.mjs               Stage 2 test
-├── testEmbedding.mjs             Stage 3 test
-├── testVerification.mjs          Stage 4 test
-├── testRegistry.mjs              Registry registration and query test
-├── testRegistryVerification.mjs  registry_required state test
-├── testConfidenceFallback.mjs    Fallback confidence calculation test
-├── lps-local-test-server.mjs     Local editor survival-analysis rig
+├── main-pipeline/
+│   ├── manifestGenerator.mjs      Stage 1 — manifest generation
+│   ├── signingLayer.mjs           Stage 2 — ECDSA P-256 signing
+│   ├── embeddingLayer.mjs         Stage 3 — Unicode carrier embedding
+│   ├── verificationTool.mjs       Stage 4 — extraction and verification
+│   ├── compression.mjs            Shortcode compression + CBOR encode/decode
+│   ├── registryClient.mjs         Supabase registry stub (register + query)
+│   └── confidenceFallback.mjs     Mathematical fallback confidence derivation
+├── test/
+│   ├── pipeline-contract.integration.test.mjs  Pipeline contract integration test
+│   ├── testConfidenceFallback.mjs Fallback confidence calculation test
+│   ├── testDegraded.mjs           Degraded-result test
+│   ├── testEmbedding.mjs          Stage 3 test
+│   ├── testManifest.mjs           Stage 1 test
+│   ├── testRegistry.mjs           Registry registration and query test
+│   ├── testRegistryValidation.mjs Registry validation test
+│   ├── testRegistryVerification.mjs registry_required state test
+│   ├── testSigning.mjs            Stage 2 test
+│   ├── testVerification.mjs       Stage 4 test
+│   ├── lps-local-test-server.mjs  Local editor survival-analysis rig
+│   └── test-proposal-007-markers.html Proposal 007 marker test tool
 ├── cert.pem                      Public certificate (v0.1 testing only)
 ├── private.pem                   Private key — GITIGNORED, never committed
 ├── .env                          Environment variables — GITIGNORED
@@ -138,7 +144,7 @@ working-group submission.
 Describes how the four pipeline stages connect — manifest generation, signing, embedding, verification — and how the registry, certificate store, and compression layer fit within that flow. Read this before making any change that touches more than one file. It is the map that prevents coupling mistakes.
 
 ### SECURITY_MODEL.md
-Defines the trust boundaries, key handling rules, threat model, and global security constraints that apply to every component without exception. Covers certificate delivery, input-validation boundaries, registry limits, and production exclusions. HMAC/HKDF are deferred cryptographic-profile decisions, not a current verified control. Read this before touching signingLayer.mjs, verificationTool.mjs, or registryClient.mjs. Security constraints in this document override convenience
+Defines the trust boundaries, key handling rules, threat model, and global security constraints that apply to every component without exception. Covers certificate delivery, input-validation boundaries, registry limits, and production exclusions. HMAC/HKDF are deferred cryptographic-profile decisions, not a current verified control. Read this before touching main-pipeline/signingLayer.mjs, main-pipeline/verificationTool.mjs, or main-pipeline/registryClient.mjs. Security constraints in this document override convenience
 in every case.
 
 ### IMPLEMENTATION_STATUS.md
@@ -208,13 +214,13 @@ using the commands above, then publish the matching `cert.pem` wherever
 Each component has a dedicated test file. Run individually:
 
 ```bash
-node testManifest.mjs
-node testSigning.mjs
-node testEmbedding.mjs
-node testVerification.mjs
-node testRegistry.mjs
-node testRegistryVerification.mjs
-node testConfidenceFallback.mjs
+node test/testManifest.mjs
+node test/testSigning.mjs
+node test/testEmbedding.mjs
+node test/testVerification.mjs
+node test/testRegistry.mjs
+node test/testRegistryVerification.mjs
+node test/testConfidenceFallback.mjs
 ```
 
 The current audit records assertion-backed integration and regression evidence,
@@ -233,13 +239,13 @@ policy remain deferred.
 
 ## Local Editor Survival Testing
 
-Use `lps-local-test-server.mjs` for manual copy/paste survival analysis.
-This is the local root-pipeline rig, not the removed demo survival-test-tool.
+Use `test/lps-local-test-server.mjs` for manual copy/paste survival analysis.
+This is the local main-pipeline test rig, not the removed demo survival-test-tool.
 
 Run from the repository root:
 
 ```bash
-node lps-local-test-server.mjs
+node test/lps-local-test-server.mjs
 ```
 
 Open:
@@ -255,7 +261,7 @@ Workflow:
 - Paste it into the verifier.
 - Record the survival row returned by the tool.
 
-The local server uses the real root modules:
+The local server uses the real main-pipeline modules:
 `generateManifest -> signManifest -> embedManifest -> verifyManifest`.
 It opts into local `cert.pem` verification and skips registry lookup so
 manual editor tests do not require internet certificate fetches or Supabase.

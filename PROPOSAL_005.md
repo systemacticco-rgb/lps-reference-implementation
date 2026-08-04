@@ -228,14 +228,14 @@ Derived key is sensitive — never logged, never returned
 Paragraph merge decisions:
   paragraphAnalysis() must return all merge decisions explicitly
   in the plan output as merged_paragraphs: [2, 3] per zone entry.
-  Merges are never silent. verificationTool.mjs surfaces merge
+  Merges are never silent. main-pipeline/verificationTool.mjs surfaces merge
   map in verified output so forensic report reflects actual
   embedding zones not original paragraph structure.
 
 Chunk 001 special case:
   Chunk 001 payload is 40 bytes — 32 checksum + 8 data.
   All other chunks carry 8 bytes payload.
-  Slicing function in embeddingLayer.mjs treats chunk 001
+  Slicing function in main-pipeline/embeddingLayer.mjs treats chunk 001
   separately. parseHeader() in chunkLayer.mjs is unaffected —
   it strips the 11-byte header and returns whatever follows.
   reconstructFromChunks() knows chunk 001 payload starts
@@ -248,7 +248,7 @@ Replay attack — original_manifest disclosure threshold:
   content_mismatch reason. Full disclosure reserved for
   minor edits where forensic value outweighs disclosure risk.
   Threshold locked at 10% — see [D.6]. Implemented in
-  verificationTool.mjs, confirmed passing in the real
+  main-pipeline/verificationTool.mjs, confirmed passing in the real
   environment (small-edit discloses, extreme-mismatch
   withholds). Open question for this proposal specifically:
   whether partial_recovery needs its own disclosure rule,
@@ -346,8 +346,8 @@ Canonicalization determinism across reconstruction:
   begins — see SECURITY_MODEL.md "Security assumptions."
   Threshold/approach open — see Section 9.
 
-Reconstruction logic requires verificationTool.mjs update.
-Chunk header format requires embeddingLayer.mjs update.
+Reconstruction logic requires main-pipeline/verificationTool.mjs update.
+Chunk header format requires main-pipeline/embeddingLayer.mjs update.
 c2pa-text chunk header exposure — see appendix gap 1.
 Position parameter confirmation — see appendix gap 2.
 Fixed 25% overlap is the spec value for v0.1.

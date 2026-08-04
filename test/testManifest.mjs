@@ -1,8 +1,8 @@
-import { generateManifest } from './manifestGenerator.mjs';
+import { generateManifest } from '../main-pipeline/manifestGenerator.mjs';
 import assert from 'node:assert/strict';
 /*
  * [G.1] WHAT THIS FILE DOES
- * This is the test for Stage 1 — manifestGenerator.mjs.
+ * This is the test for Stage 1 — main-pipeline/manifestGenerator.mjs.
  * It constructs a controlled, predictable input and passes it directly
  * to generateManifest(). The output is printed to the terminal as formatted JSON.
  * No assertions, no pass/fail logic. The test passes if the output looks correct

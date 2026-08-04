@@ -353,7 +353,7 @@ or replaced by an `lps_version` shorthand. Missing, invalid, or unsupported
 Confidence stored as integer 0-100, not float 0.0-1.0.
 Example: 0.95 stored as 95. Division by 100 on extraction
 for display is specified but not implemented in v0.1 —
-verificationTool.mjs returns raw integers. Consumers should
+main-pipeline/verificationTool.mjs returns raw integers. Consumers should
 expect integers in the range 0-100 from the current
 implementation.
 The normative confidence contract is defined in this section, not in a README.
@@ -498,7 +498,7 @@ audited reference implementation.
 ## 8. Validation evidence [CURRENT AUDITED SCOPE]
 
 The audit confirms assertion-backed integration, manifest, embedding,
-confidence, signing, and verification coverage. `adrIntegration.test.mjs`
+confidence, signing, and verification coverage. `test/pipeline-contract.integration.test.mjs`
 completed 12 assertion-backed checks for the locked envelope, registry,
 malformed-carrier, and failure contracts. The stale confidence, signing, and
 verification tests were corrected and are assertion-backed.

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { generateManifest } from './manifestGenerator.mjs';
-import { signManifest } from './signingLayer.mjs';
+import { generateManifest } from '../main-pipeline/manifestGenerator.mjs';
+import { signManifest } from '../main-pipeline/signingLayer.mjs';
 
 const visibleText = 'A'.repeat(401);
 const contentSignedAt = '2026-08-02T00:00:00.000Z';

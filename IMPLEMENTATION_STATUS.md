@@ -22,7 +22,7 @@ exclusions are in [`SECURITY_MODEL.md`](SECURITY_MODEL.md).
 | Carrier and registry routing | Confirmed | Valid carriers take normal verification. Absent, corrupted, and unparseable carriers use exact-hash recovery. Exact match, no match, unavailable, and invalid-response outcomes remain distinct. |
 | Registry runtime behavior | Runtime-confirmed | Read-only live exact-match returned `registry_required / registry_match / absent`; read-only live no-match returned `degraded / registry_no_match / absent`. These are not availability or SLO evidence. |
 | Certificate and tamper path | Runtime-confirmed | Verification through the configured allowed HTTPS certificate route succeeded; visible-text tampering returned `text_hash_mismatch`. This confirms the route, fingerprint, and signature path—not issuer governance. |
-| Regression maintenance | Confirmed | `adrIntegration.test.mjs` completed 12 assertion-backed tests. The confidence, signing, and verification regressions were corrected from stale assertions and are assertion-backed. |
+| Regression maintenance | Confirmed | `test/pipeline-contract.integration.test.mjs` completed 12 assertion-backed tests. The confidence, signing, and verification regressions were corrected from stale assertions and are assertion-backed. |
 
 ## Result-state boundary
 

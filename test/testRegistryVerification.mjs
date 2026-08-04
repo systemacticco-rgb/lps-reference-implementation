@@ -1,9 +1,9 @@
-import { registerContent } from './registryClient.mjs';
-import { verifyManifest } from './verificationTool.mjs';
+import { registerContent } from '../main-pipeline/registryClient.mjs';
+import { verifyManifest } from '../main-pipeline/verificationTool.mjs';
 
 /*
  * [L.1] WHAT THIS FILE DOES
- * This test targets the two states that verificationTool.mjs returns
+ * This test targets the two states that main-pipeline/verificationTool.mjs returns
  * when there is no embedded signal in the received text.
  * Every other test starts with embedded content. This one deliberately does not.
  * It proves the registry fallback path works — that the system does not
@@ -51,7 +51,7 @@ console.log('Registered with token:', record.token);
 /*
  * [L.3] TEST 1 — registry_required STATE
  * verifyManifest() receives plainText — the registered text with no embedded signal.
- * Inside verificationTool.mjs, extraction finds nothing.
+ * Inside main-pipeline/verificationTool.mjs, extraction finds nothing.
  * The function then hashes the received text and queries the registry.
  * The hash matches the record written in the setup block above.
  * A registry record is found.

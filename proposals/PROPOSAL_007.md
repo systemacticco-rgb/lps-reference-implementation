@@ -280,7 +280,7 @@ scope nor establishes C2PA A.8 conformance.
 
 ## What Has Been Built
 
-[IMPLEMENTED — SCOPED] `test-proposal-007-markers.html` is a browser render test with an attached embed–copy–verify utility. It is not a validated round-trip test until T.Clipboard instrumentation confirms post-clipboard codepoint-array integrity and embedding-dropdown decoupling is implemented.
+[IMPLEMENTED — SCOPED] `test/test-proposal-007-markers.html` is a browser render test with an attached embed–copy–verify utility. It is not a validated round-trip test until T.Clipboard instrumentation confirms post-clipboard codepoint-array integrity and embedding-dropdown decoupling is implemented.
 
 [OBSERVED — SCOPED] The tool recorded the browser selection/copy observations and the ADR's named route-specific cross-transport results. Neither set establishes a general clipboard, transport, or injection-path result.
 

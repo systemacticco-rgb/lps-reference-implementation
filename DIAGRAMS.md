@@ -6,25 +6,25 @@ This file is the visual companion to `ARCHITECTURE.md` and the private `SPEC.md`
 
 ```mermaid
 flowchart TD
-    A[Visible text input] --> B[manifestGenerator.mjs]
-    B --> C[signingLayer.mjs]
-    C --> D[compression.mjs]
-    D --> E[embeddingLayer.mjs]
+    A[Visible text input] --> B[main-pipeline/manifestGenerator.mjs]
+    B --> C[main-pipeline/signingLayer.mjs]
+    C --> D[main-pipeline/compression.mjs]
+    D --> E[main-pipeline/embeddingLayer.mjs]
     E --> F[Encoded text output]
 
-    F --> G[verificationTool.mjs]
-    G --> H[registryClient.mjs]
+    F --> G[main-pipeline/verificationTool.mjs]
+    G --> H[main-pipeline/registryClient.mjs]
     G --> I[Confidence fallback
 if needed]
     G --> J[Verification result JSON]
 
-    B --> K[testManifest.mjs]
-    C --> L[testSigning.mjs]
-    D --> M[testEmbedding.mjs]
-    G --> N[testVerification.mjs]
-    H --> O[testRegistry.mjs]
-    H --> P[testRegistryVerification.mjs]
-    I --> Q[testConfidenceFallback.mjs]
+    B --> K[test/testManifest.mjs]
+    C --> L[test/testSigning.mjs]
+    D --> M[test/testEmbedding.mjs]
+    G --> N[test/testVerification.mjs]
+    H --> O[test/testRegistry.mjs]
+    H --> P[test/testRegistryVerification.mjs]
+    I --> Q[test/testConfidenceFallback.mjs]
 ```
 
 ## 2 Current v0.1 data flow
@@ -53,18 +53,18 @@ P-256 + SHA-256 + IEEE P1363]
 ```mermaid
 flowchart TD
     subgraph Trusted authoring side
-        A[manifestGenerator.mjs]
-        B[signingLayer.mjs]
+        A[main-pipeline/manifestGenerator.mjs]
+        B[main-pipeline/signingLayer.mjs]
     end
 
     subgraph Transport / document surface
-        C[embeddingLayer.mjs]
+        C[main-pipeline/embeddingLayer.mjs]
         D[Visible text + invisible carrier]
     end
 
     subgraph Verification side
-        E[verificationTool.mjs]
-        F[registryClient.mjs]
+        E[main-pipeline/verificationTool.mjs]
+        F[main-pipeline/registryClient.mjs]
     end
 
     A --> B --> C --> D --> E --> F
@@ -110,7 +110,7 @@ disclosure-threshold decision, locked and implemented July 3 2026.
 A manifest missing `text_length` (a pre-D.6 legacy case, not
 currently producible by this codebase) also routes to `failed`
 with no disclosure — omitted here to keep the diagram readable;
-see `verificationTool.mjs` STEP 4 for the exact three-way branch.
+see `main-pipeline/verificationTool.mjs` STEP 4 for the exact three-way branch.
 
 ## 6 Future Proposal 005 flow
 
