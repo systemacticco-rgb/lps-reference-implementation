@@ -23,7 +23,7 @@ exclusions are in [`SECURITY_MODEL.md`](SECURITY_MODEL.md).
 | Registry runtime behavior | Runtime-confirmed | Read-only live exact-match returned `registry_required / registry_match / absent`; read-only live no-match returned `degraded / registry_no_match / absent`. These are not availability or SLO evidence. |
 | Certificate and tamper path | Runtime-confirmed | Verification through the configured allowed HTTPS certificate route succeeded; visible-text tampering returned `text_hash_mismatch`. This confirms the route, fingerprint, and signature path—not issuer governance. |
 | Regression maintenance | Confirmed | `test/pipeline-contract.integration.test.mjs` completed 12 assertion-backed tests. The confidence, signing, and verification regressions were corrected from stale assertions and are assertion-backed. |
-| Proposal 007 ADR records | Recorded separately; not LPS audit evidence | ADR 2 is a proposed cooperative-marker testing-tool design; ADR 3 is a route-scoped cross-transport observation log. Neither validates the v0.1 envelope, carrier, registry, cryptographic, or production pipeline. |
+| Proposal 007 ADR records | Recorded separately; not LPS audit evidence | It is a proposed cooperative-marker testing-tool design. |
 
 ## Result-state boundary
 
