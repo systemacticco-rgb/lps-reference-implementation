@@ -88,9 +88,9 @@ a final production cryptographic profile, certificate-trust governance, or
 COSE, JOSE, C2PA, or other interoperability profile. The following is a
 reference-implementation mechanism, not a standards-conformance claim.
 
-Algorithm: es256 (internal LPS label for ECDSA P-256, SHA-256, raw r‖s)
+**Algorithm**: es256 (internal LPS label for ECDSA P-256, SHA-256, raw r‖s)
 Library: Node.js built-in crypto module (no install required)
-Signature encoding: IEEE P1363 (raw r‖s, 64 bytes fixed for P-256).
+**Signature encoding**: IEEE P1363 (raw r‖s, 64 bytes fixed for P-256).
   The JOSE identifier "ES256" uses raw r‖s bytes; COSE identifies
   the related primitive as algorithm -7. The LPS string es256 is neither
   of those standard identifiers and does not create a JOSE or COSE envelope.
@@ -98,14 +98,14 @@ Signature encoding: IEEE P1363 (raw r‖s, 64 bytes fixed for P-256).
   { key, dsaEncoding: 'ieee-p1363' } to both createSign().sign()
   and createVerify().verify() calls. This implementation detail does not
   establish independent primitive, JWS, COSE, or envelope interoperability.
-Note: c2pa-text is used in component 3 (embedding layer) only,
+**Note**: c2pa-text is used in component 3 (embedding layer) only,
       not for signing. Signing uses native crypto exclusively.
       @contentauth/c2pa-node is listed in package.json but is
       not imported by the embedding layer directly.
-Note: use @contentauth/c2pa-node only for the embedding layer.
+**Note**: use @contentauth/c2pa-node only for the embedding layer.
       Do not use the original c2pa-node package.
-Key format: PEM
-Certificate generation commands:
+**Key format**: PEM
+**Certificate generation commands**:
 [UPDATED — 2026-07-06] Canonical key generation — named-curve PKCS#8.
 Prior commands used openssl ecparam which produces explicit-parameters
 encoding by default on LibreSSL (macOS). Node.js and panva/jose accept
