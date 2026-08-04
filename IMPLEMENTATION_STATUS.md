@@ -23,6 +23,7 @@ exclusions are in [`SECURITY_MODEL.md`](SECURITY_MODEL.md).
 | Registry runtime behavior | Runtime-confirmed | Read-only live exact-match returned `registry_required / registry_match / absent`; read-only live no-match returned `degraded / registry_no_match / absent`. These are not availability or SLO evidence. |
 | Certificate and tamper path | Runtime-confirmed | Verification through the configured allowed HTTPS certificate route succeeded; visible-text tampering returned `text_hash_mismatch`. This confirms the route, fingerprint, and signature path—not issuer governance. |
 | Regression maintenance | Confirmed | `test/pipeline-contract.integration.test.mjs` completed 12 assertion-backed tests. The confidence, signing, and verification regressions were corrected from stale assertions and are assertion-backed. |
+| Proposal 007 ADR records | Recorded separately; not LPS audit evidence | ADR 2 is a proposed cooperative-marker testing-tool design; ADR 3 is a route-scoped cross-transport observation log. Neither validates the v0.1 envelope, carrier, registry, cryptographic, or production pipeline. |
 
 ## Result-state boundary
 
@@ -42,6 +43,15 @@ malformed/incomplete response → degraded / registry_response_invalid
 
 The normative status, reason, and carrier-condition contract belongs to
 [`SPEC.md`](SPEC.md). This summary exists to state what the audit confirmed.
+
+### Separate Proposal 007 record boundary
+
+Proposal 007's AI-only, document-header testing-tool design and its recorded
+cross-transport observations must not be counted as LPS implementation tests.
+In particular, route-specific marker survival only describes the received
+marker sequence for that tool; it does not establish universal transport
+preservation, provider behavior, authorship, or production suitability. The
+records are maintained in [`ADR_2`](ADR_2) and [`ADR_3`](ADR_3).
 
 ## Production-only follow-ups
 

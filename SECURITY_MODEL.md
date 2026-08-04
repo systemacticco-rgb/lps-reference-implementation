@@ -85,6 +85,24 @@ double-click copy, tested BiDi-language content, and trailing normalization.
 Those paths showed marker survival in the tested flows, but they do not prove
 cross-platform, cross-browser, cross-editor, or provider compatibility.
 
+[`ADR_2`](ADR_2) records a proposed, testing-tool-only AI-marker grammar:
+one document-scoped total-count header, no human markers, and no per-span
+ordinals or totals. Its count can expose an excess-pair anomaly but cannot
+localize a missing ordinal or preserve the former human-marker
+selective-stripping signal. An internal approved-library codepoint inside a
+valid pair is a forensic signal; it does not authenticate the content or make
+the enclosing pair provenance evidence, and does not remove that pair from the
+tool's valid-pair count. The proposed grammar's detailed error catalog is
+distinct from the LPS `status`, `reason_code`, and
+`carrier_condition` contract.
+
+[`ADR_3`](ADR_3) adds recorded cross-transport observations for the separate
+tool. Its route results, including messenger selection effects and the
+Facebook Web composer/post difference, describe only the received codepoint
+sequence. Neither a valid signal nor a missing signal identifies a service as
+the cause, proves stripping or mutation, establishes provenance or authorship,
+or supplies a production security control.
+
 Visual glyphs are a usability and disclosure concern, not proof of corruption:
 the observed rendering varied by operating system, application, and file type.
 Marker corruption must be established by codepoint loss, mutation, reordering,

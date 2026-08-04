@@ -122,6 +122,23 @@ The audit does not establish production readiness. The following are deferred:
 Future provider attestation and authorized-issuer governance are trust-model
 questions, not features implied by the current reference implementation.
 
+## Separate Proposal 007 testing-tool boundary [NON-NORMATIVE]
+
+Proposal 007 is a separate cooperative U+2060–U+2064 marker testing tool. It
+is not a component of the v0.1 signed-selector-carrier pipeline, registry
+recovery route, or LPS result contract. The proposed ADR 2 tool design uses
+AI-only pair markers and one document-scoped, base-5 total-count header;
+human spans and per-span ordinal or total-count fields are excluded. That
+choice permits count-level anomaly reporting but not ordinal gap localization
+or the former human-marker selective-stripping signal.
+
+The recorded ADR 3 cross-transport observations belong at the received-input
+boundary of that separate tool. A valid signal reports only the codepoint
+sequence received after a named test route; a missing signal does not identify
+stripping, mutation, authorship, provenance, or the responsible service.
+Neither ADR adds an LPS cryptographic, carrier, registry, or production
+architecture requirement.
+
 ## Documentation map
 
 - [`public-repo/working-group-submission.md`](public-repo/working-group-submission.md)
@@ -134,3 +151,5 @@ questions, not features implied by the current reference implementation.
 - [`SECURITY_MODEL.md`](SECURITY_MODEL.md) owns security controls and
   non-production exclusions.
 - [`CHANGELOG.md`](CHANGELOG.md) records dated factual changes.
+- [`ADR_2`](ADR_2) records proposed Proposal 007 marker/header design;
+  [`ADR_3`](ADR_3) records separate, route-scoped Proposal 007 observations.

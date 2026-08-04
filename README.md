@@ -4,7 +4,7 @@
 **Maintained by:** Brayan Daniel Rodriguez Lugo — systemacticco-rgb
 **Status:** v0.1 — audited reference pipeline; not production approval
 **Counterpart (public):** github.com/systemacticco-rgb/linguistic-provenance-schema
-**Document revision:** V2 — Proposal 007 testing-tool evidence alignment, 2026-08-02
+**Document revision:** V3 — Proposal 007 ADR 2/ADR 3 evidence alignment, 2026-08-03
 **Session-log alignment:** standards-boundary remediation, 2026-07-29
 
 ---
@@ -329,6 +329,30 @@ testing-tool scope, and excludes human spans, per-span ordinals, and per-span
 total-count fields. Internal codepoints within valid marker context take the
 internal-signal path.
 
+### Proposed marker-tool boundary — ADR 2 (2026-07-24)
+
+[`ADR_2`](ADR_2) is a **proposed**, separate testing-tool design record. It
+uses an AI-only marker model and a document-scoped base-5 total-count header;
+the header can support count-level anomaly reporting but cannot localize an
+ordinal gap. The former human-marker selective-stripping signal is therefore
+not available. The tool's approved U+2060–U+2064 library, normalization and
+scan rules, and detailed error catalog do not alter the audited LPS envelope
+or result contract. A future provider header-placement note in that ADR is not
+an implemented LPS provider-integration requirement.
+
+### Recorded cross-transport evidence — ADR 3 (2026-07-29)
+
+[`ADR_3`](ADR_3) separately records route-specific Proposal 007 observations
+for Facebook Messenger, Telegram, WhatsApp, Universal Clipboard, Facebook and
+Instagram web, ChatGPT, Claude, Gemini, X, Photoshop, Android/iOS browser use,
+Reddit, Notion, and Slack. “100% survival” means only that this testing tool
+found valid signals for the named exercised route. Facebook Web's composer
+retained signals while the observed post path did not; the record does not
+attribute a cause. Selection is part of the received-input boundary: Messenger
+double-click selection recorded a trailing U+0020, while Telegram and WhatsApp
+required precise selection for reliable results. A missing or invalid signal
+does not establish stripping, mutation, authorship, or provenance.
+
 Rendering remains a usability and disclosure issue rather than a corruption
 signal: Linux LibreOffice displayed no glyphs; Linux VS Code displayed yellow
 outlined squares in code files only; Windows VS Code displayed rectangles;
@@ -338,8 +362,10 @@ universal invisibility, codepoint-order preservation under BiDi selection, or
 the cause of trailing-space observations in other environments.
 
 See [`proposals/PROPOSAL_007.md`](proposals/PROPOSAL_007.md) for proposal
-context and [`local-files/ADR_4`](local-files/ADR_4) for the append-only test
-evidence record and unresolved follow-ups.
+context, [`ADR_2`](ADR_2) for the proposed marker/header record,
+[`ADR_3`](ADR_3) for the cross-transport record, and
+[`local-files/ADR_4`](local-files/ADR_4) for the later local-test evidence
+record and unresolved follow-ups.
 
 ---
 

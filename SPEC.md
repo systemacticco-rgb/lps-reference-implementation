@@ -555,9 +555,37 @@ valid marker context use the internal-signal path. The listed error identifiers
 and normalized indexes remain fixed testing-tool expectations unless a
 separately approved error-catalog change is made.
 
+#### ADR 2 marker/header record [NON-NORMATIVE]
+
+[`ADR_2`](ADR_2) is a proposed Proposal 007 testing-tool design record. It
+defines an AI-only model with one document-scoped base-5 total-count header;
+the resulting count-level signal cannot localize ordinal gaps or retain the
+former human-marker selective-stripping observation. It also records the
+approved U+2060–U+2064 library, normalized-codepoint scan model, and a detailed
+tool error catalog. None of those rules adds an LPS v0.1 field, carrier route,
+or verification result.
+
+The ADR 2 catalog and later observed testing-tool output labels are not an LPS
+error namespace and must not be treated as interchangeable without an approved
+Proposal 007 catalog reconciliation. This specification therefore preserves the
+recorded testing-tool observations above without assigning them normative LPS
+semantics.
+
+#### ADR 3 cross-transport record [NON-NORMATIVE]
+
+[`ADR_3`](ADR_3) separately records route-specific Proposal 007 observations
+from messenger, web/social, AI-client, editor, mobile-browser, and clipboard
+paths. A reported survival result means only that the testing-tool verifier
+found valid signals after the named route. The Facebook Web composer/post
+difference and observed selection-dependent trailing U+0020 are received-input
+observations, not evidence assigning a mutation cause. Absence of a valid
+signal, including a no-valid-signal result where applicable, does not establish
+stripping, provenance, authorship, or service behavior.
+
 These observations are not a claim of universal transport compatibility or
 invisibility. They do not resolve the source of trailing spaces in other
 clipboard paths, prove that BiDi highlighting cannot alter selection boundaries
 or codepoint order, or define production marker grammar, placement, fallback,
-or injection controls. The complete evidence and open-question record is in
-[`local-files/ADR_4`](local-files/ADR_4).
+or injection controls. The 2026-07-31 local-test evidence and open-question
+record is in [`local-files/ADR_4`](local-files/ADR_4); ADR 3 is a separate
+cross-transport record rather than part of that later local-test dataset.

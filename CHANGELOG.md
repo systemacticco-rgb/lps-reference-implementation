@@ -2,6 +2,27 @@
 
 This changelog records architectural, security, and documentation changes for the LPS reference implementation. It is not a Git commit log. It is a human-readable record of why the system changed.
 
+## [2026-08-03] — Proposal 007 ADR 2 and ADR 3 traceability added
+
+- Added documentation traceability for the separate Proposal 007 testing tool:
+  ADR 2 is a **proposed** AI-only marker/header design record; ADR 3 is a
+  **recorded** route-scoped cross-transport evidence log. Neither changes the
+  audited LPS `ev: 1` envelope, selector carrier, registry, cryptographic, or
+  production-trust contract.
+- Recorded the ADR 2 boundary that a document-scoped total-count header offers
+  count-level observation only; human spans and per-span ordinals/counts are
+  excluded, so ordinal-gap localization and the former human-marker
+  selective-stripping signal are unavailable.
+- Recorded the ADR 3 interpretation boundary: route-specific marker survival
+  describes the received tool input only. The Messenger selection/trailing-U+0020
+  observation and Facebook Web composer/post difference do not establish a
+  mutation cause, service behavior, provenance, authorship, or portability.
+- Kept the later 2026-07-31 local-test evidence separate from the 2026-07-29
+  cross-transport record. No source, test-tool, or LPS pipeline code changed.
+- Did not reconcile ADR 2's proposed detailed error catalog with later observed
+  test-output label formatting; no LPS result identifier is affected by that
+  unresolved Proposal 007 catalog question.
+
 ## [2026-08-02] — Audited current-state contract and documentation alignment
 
 - Recorded the audited `ev: 1` outer-envelope contract, distinct authenticated

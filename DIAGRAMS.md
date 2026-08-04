@@ -1,151 +1,221 @@
 # LPS Diagrams
 
-This file is the visual companion to `ARCHITECTURE.md` and the private `SPEC.md`. It separates the built v0.1 pipeline from future Proposal 005 work.
+This file is the visual companion to `ARCHITECTURE.md` and `SPEC.md`. It
+describes the current audited v0.1 reference pipeline only. It does not claim
+production readiness, C2PA conformance, or implementation of Proposal 005.
 
-## 1 Current v0.1 component tree
+## 1. Current v0.1 component tree
 
 ```mermaid
 flowchart TD
-    A[Visible text input] --> B[main-pipeline/manifestGenerator.mjs]
-    B --> C[main-pipeline/signingLayer.mjs]
-    C --> D[main-pipeline/compression.mjs]
-    D --> E[main-pipeline/embeddingLayer.mjs]
-    E --> F[Encoded text output]
+    A["Visible text, segments, signing tool, content_signed_at"] --> B["main-pipeline/manifestGenerator.mjs"]
+    F["main-pipeline/confidenceFallback.mjs"] -. "only when segment confidence is absent" .-> B
+    B --> C["main-pipeline/signingLayer.mjs"]
+    C --> D["main-pipeline/compression.mjs"]
+    D --> E["main-pipeline/embeddingLayer.mjs"]
+    E --> G["Embedded visible text plus LPS selector carrier"]
 
-    F --> G[main-pipeline/verificationTool.mjs]
-    G --> H[main-pipeline/registryClient.mjs]
-    G --> I[Confidence fallback
-if needed]
-    G --> J[Verification result JSON]
+    G --> H["main-pipeline/verificationTool.mjs"]
+    H -. "only for absent, corrupted, or unparseable carrier" .-> I["main-pipeline/registryClient.mjs"]
+    H --> J["Verification result JSON"]
 
-    B --> K[test/testManifest.mjs]
-    C --> L[test/testSigning.mjs]
-    D --> M[test/testEmbedding.mjs]
-    G --> N[test/testVerification.mjs]
-    H --> O[test/testRegistry.mjs]
-    H --> P[test/testRegistryVerification.mjs]
-    I --> Q[test/testConfidenceFallback.mjs]
+    K["test/testManifest.mjs"] -.-> B
+    L["test/testConfidenceFallback.mjs"] -.-> F
+    M["test/testSigning.mjs"] -.-> C
+    N["test/testEmbedding.mjs"] -.-> E
+    O["test/testVerification.mjs"] -.-> H
+    P["test/testRegistry.mjs, test/testRegistryValidation.mjs, and test/testRegistryVerification.mjs"] -.-> I
+    Q["test/pipeline-contract.integration.test.mjs"] -.-> J
 ```
 
-## 2 Current v0.1 data flow
+The dotted test links are evidence links, not runtime data paths.
+
+## 2. Current v0.1 authoring and transport flow
 
 ```mermaid
 flowchart LR
-    T[Plain text] --> H1[Segment mapping]
-    H1 --> M1[Manifest JSON]
-    M1 --> S1[ES256 signing
-P-256 + SHA-256 + IEEE P1363]
-    S1 --> C1[Compression]
-    C1 --> E1[Text embedding]
-    E1 --> X1[Embedded document]
+    A["Visible text"] --> B["Strip trailing CR, LF, and space"]
+    B --> C["UTF-8 bytes"]
+    C --> D["SHA-256 text_hash and byte text_length"]
 
-    X1 --> V1[Extraction]
-    V1 --> V2[Signature verification]
-    V1 --> V3[Text hash verification]
-    V1 --> V4[Registry lookup if carrier missing]
-    V2 --> R1[verified / failed]
-    V3 --> R1
-    V4 --> R2[registry_required / degraded]
+    E["Segments and optional confidence"] --> F["Confidence provenance: tool or fallback"]
+    F --> G["Inner manifest with content_signed_at"]
+    D --> G
+
+    G --> H["Outer envelope: ev: 1, algorithm, signed_at"]
+    H --> I["Canonical CBOR signing bytes and IEEE P1363 signature"]
+    I --> J["Shortcode compression and CBOR encoding"]
+    J --> K["Selector-carrier embedding without visible-text change"]
+    K --> L["Embedded document"]
 ```
 
-## 3 Trust boundaries
+`ev` remains a direct outer-envelope field through compression; it is not a
+shortcode dictionary entry. The selector carrier is an LPS format and is not a
+C2PA JUMBF/COSE manifest store.
+
+## 3. Trust and validation boundaries
 
 ```mermaid
 flowchart TD
-    subgraph Trusted authoring side
-        A[main-pipeline/manifestGenerator.mjs]
-        B[main-pipeline/signingLayer.mjs]
+    subgraph A["Authoring-side process"]
+        A1["Source text, segments, and content_signed_at"]
+        A2["Manifest and confidence provenance"]
+        A3["Private key and matching local certificate"]
+        A4["Signed envelope"]
+        A1 --> A2 --> A4
+        A3 --> A4
     end
 
-    subgraph Transport / document surface
-        C[main-pipeline/embeddingLayer.mjs]
-        D[Visible text + invisible carrier]
+    subgraph B["Untrusted transport and document surface"]
+        B1["Visible text plus selector carrier"]
     end
 
-    subgraph Verification side
-        E[main-pipeline/verificationTool.mjs]
-        F[main-pipeline/registryClient.mjs]
+    subgraph C["Verification-side process"]
+        C1["Carrier classification, duplicate-key guard, and envelope validation"]
+        C2["Certificate fingerprint and signature verification"]
+        C3["Canonical text hash and byte-length verification"]
+        C4["Result contract"]
+        C1 --> C2 --> C3 --> C4
     end
 
-    A --> B --> C --> D --> E --> F
+    subgraph D["External read-only dependencies"]
+        D1["Allowed HTTPS certificate route"]
+        D2["Supabase exact-hash registry recovery"]
+    end
+
+    A4 --> B1 --> C1
+    D1 --> C2
+    D2 --> C4
 ```
 
-## 4 Signing and verification boundary
+The verifier treats the visible text, carrier, decoded envelope, certificate
+response, and registry response as untrusted until their applicable validation
+boundary completes. The registry is consulted only on the recovery branch and
+does not authenticate an issuer or restore segment evidence.
+
+## 4. Signed-envelope and certificate boundary
 
 ```mermaid
 flowchart TD
-    A[Canonical manifest bytes] --> B[Node crypto sign]
-    B --> C[Raw r‖s signature
-IEEE P1363]
-    C --> D[Stored alongside manifest]
+    A["Inner manifest with content_signed_at"] --> C["Authenticated signing payload"]
+    B["ev: 1, algorithm, outer signed_at"] --> C
+    C --> D["canonicalBytes(...)"]
+    D --> E["Node crypto: ECDSA P-256, SHA-256, IEEE P1363 raw r|s"]
+    E --> F["signature"]
 
-    E[Extracted manifest bytes] --> F[Node crypto verify]
-    F --> G[Signature valid?]
-    G -->|yes| H[Continue verification]
-    G -->|no| I[failed]
+    G["Matching private.pem and cert.pem"] --> H["DER SHA-256 certificate fingerprint"]
+    H --> I["cert_url and cert_fingerprint"]
+    F --> J["Stored signed envelope"]
+    I --> J
+
+    J --> K["Allowed HTTPS certificate retrieval"]
+    K --> L["Fingerprint match"]
+    L --> M["Recreate authenticated signing payload"]
+    M --> N["Signature verification"]
 ```
 
-## 5 Verification outcome model for v0.1
-```mermaid
-flowchart TD
-    A[Input document] --> B{Carrier present?}
-    B -->|yes| C{Signature valid?}
-    C -->|yes| D{Text hash matches?}
-    C -->|no| E[failed
-no original_manifest]
-    D -->|yes| F[verified]
-    D -->|no| J{Length within
-10% threshold?}
-    J -->|yes| K[failed
-original_manifest included]
-    J -->|no| L[failed
-original_manifest withheld]
-    B -->|no| G{Registry record found?}
-    G -->|yes| H[registry_required]
-    G -->|no| I[degraded]
-```
+The authenticated signing payload is `ev`, `manifest`, `algorithm`, and outer
+`signed_at`. The verifier validates envelope structure and version before
+certificate retrieval; an inner `signed_at` is invalid.
 
-Note: the length-threshold branch (J/K/L) reflects the D.6
-disclosure-threshold decision, locked and implemented July 3 2026.
-A manifest missing `text_length` (a pre-D.6 legacy case, not
-currently producible by this codebase) also routes to `failed`
-with no disclosure — omitted here to keep the diagram readable;
-see `main-pipeline/verificationTool.mjs` STEP 4 for the exact three-way branch.
-
-## 6 Future Proposal 005 flow
+## 5. Verification outcome model for v0.1
 
 ```mermaid
 flowchart TD
-    A[Document text] --> B[Paragraph analysis]
-    B --> C[Anchor manifest layer]
-    B --> D[Overlapping full-manifest copies]
+    A["Input document"] --> B{"Carrier condition"}
 
-    C --> E[Anchor HMAC check]
-    D --> F[Chunk collection]
-    F --> G[Cross-copy reconstruction]
-    G --> H[Checksum validation]
-    E --> I[anchor_only]
-    H --> J[partial_recovery]
-    F --> K[injection_detected]
-    H --> L[reconstruction_corrupted]
+    B -->|"present"| C{"Duplicate top-level key?"}
+    C -->|"yes"| D["invalid_envelope / noncanonical_encoding"]
+    C -->|"no"| E{"CBOR decodes to an envelope map with m object?"}
+    E -->|"no — unparseable"| P["Canonical visible-text hash"]
+    E -->|"yes"| F{"ev is supported integer 1?"}
+    F -->|"no"| G["unsupported_version / missing_ev, invalid_ev, or unsupported_ev"]
+    F -->|"yes"| H{"Envelope and manifest schema valid?"}
+    H -->|"no"| I["invalid_envelope / invalid_schema or malformed_envelope"]
+    H -->|"yes"| J{"Allowed certificate, fingerprint, and signature valid?"}
+    J -->|"no"| K["failed / signature_invalid"]
+    J -->|"yes"| L{"Canonical text hash and byte length match?"}
+    L -->|"yes"| M["verified / present"]
+    L -->|"no"| N["failed / text_hash_mismatch or text_length_mismatch"]
+    N --> O{"Received byte length within disclosure threshold?"}
+    O -->|"yes"| Q["Include original_manifest"]
+    O -->|"no or missing signed length"| R["Withhold original_manifest"]
+
+    B -->|"absent, corrupted, or unparseable"| P
+    P --> S{"Exact-hash registry response"}
+    S -->|"matching complete record"| T["registry_required / registry_match"]
+    S -->|"no matching record"| U["degraded / registry_no_match"]
+    S -->|"transport or HTTP failure"| V["degraded / registry_unavailable"]
+    S -->|"malformed or incomplete response"| W["degraded / registry_response_invalid"]
 ```
 
-## 7 Repository split
+Duplicate top-level envelope keys fail before version routing, certificate
+retrieval, registry access, or fallback. An `invalid_envelope` is not eligible
+for registry recovery. Disclosure affects only inclusion of `original_manifest`;
+it never changes the verification status or reason code.
+
+## 6. Deferred Proposal 005 concept — not implemented
+
+```mermaid
+flowchart TD
+    A["Document text"] --> B["Paragraph analysis"]
+    B --> C["Anchor manifest layer"]
+    B --> D["Overlapping full-manifest copies"]
+
+    C --> E["Anchor HMAC check"]
+    D --> F["Chunk collection"]
+    F --> G["Cross-copy reconstruction"]
+    G --> H["Checksum validation"]
+    E --> I["anchor_only"]
+    H --> J["partial_recovery"]
+    F --> K["injection_detected"]
+    H --> L["reconstruction_corrupted"]
+```
+
+This is proposal-only research deferred pending working-group feedback. It
+does not define an active fallback, carrier, verifier, or interoperability
+contract for v0.1.
+
+## 7. Separate Proposal 007 testing-tool boundary [NON-NORMATIVE]
 
 ```mermaid
 flowchart LR
-    A[Public LPS repo] --> B[working-group-submission.md]
-    A --> C[Proposal / research docs]
-
-    D[Private code repo] --> E[README.md]
-    D --> F[SPEC.md]
-    D --> G[ARCHITECTURE.md]
-    D --> H[Source code + tests]
+    A["Named test route"] --> B["Received U+2060–U+2064 marker sequence"]
+    B --> C["Tool normalization and codepoint scan"]
+    C --> D["AI-only pair and document-header analysis"]
+    D -->|"valid signals"| E["Route-scoped tool observation"]
+    D -->|"malformed element"| F["Tool-level diagnostic or anomaly"]
+    D -->|"no valid header or pair"| G["No valid signal; no causality or provenance inference"]
 ```
 
-## 8 One-line summary
+ADR 2 records the proposed marker/header design; ADR 3 records observations
+from named routes. This flow has no edge to the v0.1 LPS signer, carrier,
+registry, or verifier. A reported marker-survival result describes the
+received sequence for that test route only, not a general transport or
+provenance conclusion.
 
-- Public repo explains what LPS is.
-- Private repo explains how the reference implementation works.
-- v0.1 is built.
-- Proposal 005 is specified but not yet built.
+## 8. Repository split
+
+```mermaid
+flowchart LR
+    A["Public LPS repository"] --> B["working-group-submission.md"]
+    A --> C["Public README and proposal or research material"]
+
+    D["Reference implementation repository"] --> E["README.md"]
+    D --> F["SPEC.md"]
+    D --> G["ARCHITECTURE.md and DIAGRAMS.md"]
+    D --> H["main-pipeline/ source and test/ evidence"]
+```
+
+## 9. Current-state summary
+
+- The v0.1 audited reference pipeline creates, signs, compresses, embeds, and
+  verifies LPS selector carriers.
+- Valid-carrier verification authenticates the envelope and both canonical
+  visible-text bindings; recovery is limited to exact-hash registry evidence
+  after an unavailable or unparseable carrier.
+- The implementation evidence does not establish production credential policy,
+  issuer trust, registry operations, universal transport survival, or C2PA,
+  COSE, or JOSE conformance.
+- Proposal 005 remains deferred and unimplemented.
+- Proposal 007 remains a separate testing-tool design and observation record.
