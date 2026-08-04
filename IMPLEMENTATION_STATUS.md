@@ -50,8 +50,7 @@ Proposal 007's AI-only, document-header testing-tool design and its recorded
 cross-transport observations must not be counted as LPS implementation tests.
 In particular, route-specific marker survival only describes the received
 marker sequence for that tool; it does not establish universal transport
-preservation, provider behavior, authorship, or production suitability. The
-records are maintained in [`ADR_2`](ADR_2) and [`ADR_3`](ADR_3).
+preservation, provider behavior, authorship, or production suitability. 
 
 ## Production-only follow-ups
 
