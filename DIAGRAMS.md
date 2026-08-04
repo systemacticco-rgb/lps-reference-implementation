@@ -188,7 +188,7 @@ flowchart LR
     D -->|"no valid header or pair"| G["No valid signal; no causality or provenance inference"]
 ```
 
-ADR 2 records the proposed marker/header design; ADR 3 records observations
+It records the proposed marker/header design; it records observations
 from named routes. This flow has no edge to the v0.1 LPS signer, carrier,
 registry, or verifier. A reported marker-survival result describes the
 received sequence for that test route only, not a general transport or
@@ -203,8 +203,10 @@ flowchart LR
 
     D["Reference implementation repository"] --> E["README.md"]
     D --> F["SPEC.md"]
-    D --> G["ARCHITECTURE.md and DIAGRAMS.md"]
-    D --> H["main-pipeline/ source and test/ evidence"]
+    D --> G["CHANGELOG.md"]
+    D --> H["ARCHITECTURE.md and DIAGRAMS.md"]
+    D --> I["SECURITY.md"]
+    D --> J["main-pipeline/ source and test/ evidence"]
 ```
 
 ## 9. Current-state summary
