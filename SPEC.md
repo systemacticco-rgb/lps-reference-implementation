@@ -175,7 +175,7 @@ embedding are separate concerns using separate tools.
 HMAC/HKDF are not part of the audited current cryptographic profile. Any
 future HMAC/HKDF design requires separate versioning, key hierarchy, key
 identifiers, derivation parameters, storage, rotation, access policy, and
-verification semantics. None of those production decisions is established
+verification semantics. None of those production decisions are established
 here.
 
 ---
