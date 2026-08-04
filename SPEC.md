@@ -13,24 +13,6 @@ the current contract where it differs.
 
 ---
 
-## 0. Principles
-- Security above all other concerns
-- One component per file, one concern per function
-- No mixed responsibilities
-- Audited libraries only — no custom cryptographic implementations
-- Every function must be independently testable
-- Current-audited-contract sections define the supported behavior. Built
-  implementation notes describe the audited reference path; deferred,
-  placeholder, and historical material does not authorize additional behavior.
-
-[HOLD — LANGUAGE MIGRATION] JavaScript/Node.js is the reference runtime
-for v0.1. Runtime latency, typed contracts, binary-hash handling, CPU
-concurrency, and cross-language transport are production dependencies,
-not submission blockers. This specification defines no migration plan,
-benchmark, or production-service architecture.
-
----
-
 ## 0.1 Standards-Conformance Boundary [PRE-3 — PENDING]
 
 PRE-3 is a bounded evidence sweep, not a feature or architecture decision.
