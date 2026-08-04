@@ -1,10 +1,15 @@
 # LPS Reference Implementation
 
 **Repository:** lps-reference-implementation (private)
+
 **Maintained by:** Brayan Daniel Rodriguez Lugo — systemacticco-rgb
+
 **Status:** v0.1 — audited reference pipeline; not production approval
+
 **Counterpart (public):** github.com/systemacticco-rgb/linguistic-provenance-schema
+
 **Document revision:** V3 — Proposal 007 ADR 2/ADR 3 evidence alignment, 2026-08-03
+
 **Session-log alignment:** standards-boundary remediation, 2026-07-29
 
 ---
