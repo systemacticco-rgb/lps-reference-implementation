@@ -202,14 +202,7 @@ sequences, which may reduce editor survival in practice. This is an
 operational survival constraint, not an embedding-layer fallback trigger.
 Capacity threshold: [DEFINED — June 2026]
 
-[PENDING CROSS-CHECK] Five-segment reference measurement after full compression pipeline:
-Raw JSON with certificate:              2026 bytes
-After certificate removal:              1219 bytes
-After shortcode compression:             843 bytes
-After CBOR encoding:                     737 bytes
-Former assumed ceiling:                  256 bytes
-
-[PENDING CROSS-CHECK] The c2pa-text selector operation can produce longer
+The c2pa-text selector operation can produce longer
 invisible payloads for larger LPS manifests. Production limits depend on
 external editor latency, platform reclassification, token overhead, and
 transport preservation; the reference implementation does not establish a
@@ -324,10 +317,6 @@ profile. Canonical-CBOR rules and decoder resource bounds remain deferred.
 ---
 ## 4.2 Scoped carrier observations [PENDING CROSS-CHECK]
 
-[PENDING CROSS-CHECK] The candidate 3–10-segment range of 400–1,500
-compressed bytes and its associated invisible-character counts are
-scoped observations, not a production safe-operating guarantee.
-
 [PENDING CROSS-CHECK] Latency and reclassification observations are
 editor- and platform-specific. They do not establish a protocol limit,
 universal carrier preservation, or a production throughput claim.
@@ -336,7 +325,7 @@ universal carrier preservation, or a production throughput claim.
 behaviour, and transport preservation are external platform
 dependencies. No production ceiling is locked.
 
-Token overhead: text carrying large invisible Unicode payloads incurs increased token consumption when processed by any language model. Variation selectors are not collapsed by tokenizers — each character consumes token budget. Integrations passing LPS-embedded text to language model APIs must account for this overhead. This must be stated explicitly in integration documentation before any production deployment guidance is published.
+Token overhead: text carrying large invisible Unicode payloads incurs increased token consumption when processed by any language model. Variation selectors are not collapsed by tokenizers — each character consumes token budget. Integrations passing LPS-embedded text to language model APIs must account for this overhead.
 
 [PENDING CROSS-CHECK / LIMITATION] LPS manifests must not be embedded
 inside code syntax blocks in v0.1. Code renderers may display invisible
@@ -421,10 +410,10 @@ authorship or provider origin, or serve as issuer authentication.
 `generating_id` has minimal safety validation only. This specification does
 not define its identity, authorization, provider, issuer, or trust semantics.
 
-Registry SLOs, monitoring, retry policy, incident response, rollback,
+**Registry SLOs, monitoring, retry policy, incident response, rollback,
 credential isolation, access governance, retention, and identity policy are
 production-only follow-ups. No such operational behavior is established by the
-audited reference implementation.
+audited reference implementation.**
 ---
 
 ## 7. Security Constraints — Global [SECURITY-CRITICAL]
@@ -451,8 +440,7 @@ audited reference implementation.
 The audit confirms assertion-backed integration, manifest, embedding,
 confidence, signing, and verification coverage. `test/pipeline-contract.integration.test.mjs`
 completed 12 assertion-backed checks for the locked envelope, registry,
-malformed-carrier, and failure contracts. The stale confidence, signing, and
-verification tests were corrected and are assertion-backed.
+malformed-carrier, and failure contracts.
 
 Runtime evidence also confirms:
 
@@ -506,9 +494,9 @@ valid marker context use the internal-signal path. The listed error identifiers
 and normalized indexes remain fixed testing-tool expectations unless a
 separately approved error-catalog change is made.
 
-#### ADR 2 marker/header record [NON-NORMATIVE]
+Marker/header record [NON-NORMATIVE]
 
-[`ADR_2`](ADR_2) is a proposed Proposal 007 testing-tool design record. It
+It's a proposed Proposal 007 testing-tool design record. It
 defines an AI-only model with one document-scoped base-5 total-count header;
 the resulting count-level signal cannot localize ordinal gaps or retain the
 former human-marker selective-stripping observation. It also records the
@@ -516,15 +504,15 @@ approved U+2060–U+2064 library, normalized-codepoint scan model, and a detaile
 tool error catalog. None of those rules adds an LPS v0.1 field, carrier route,
 or verification result.
 
-The ADR 2 catalog and later observed testing-tool output labels are not an LPS
+Later observed testing-tool output labels are not an LPS
 error namespace and must not be treated as interchangeable without an approved
 Proposal 007 catalog reconciliation. This specification therefore preserves the
 recorded testing-tool observations above without assigning them normative LPS
 semantics.
 
-#### ADR 3 cross-transport record [NON-NORMATIVE]
+Cross-transport record [NON-NORMATIVE]
 
-[`ADR_3`](ADR_3) separately records route-specific Proposal 007 observations
+Separately records route-specific Proposal 007 observations
 from messenger, web/social, AI-client, editor, mobile-browser, and clipboard
 paths. A reported survival result means only that the testing-tool verifier
 found valid signals after the named route. The Facebook Web composer/post
@@ -537,6 +525,4 @@ These observations are not a claim of universal transport compatibility or
 invisibility. They do not resolve the source of trailing spaces in other
 clipboard paths, prove that BiDi highlighting cannot alter selection boundaries
 or codepoint order, or define production marker grammar, placement, fallback,
-or injection controls. The 2026-07-31 local-test evidence and open-question
-record is in [`local-files/ADR_4`](local-files/ADR_4); ADR 3 is a separate
-cross-transport record rather than part of that later local-test dataset.
+or injection controls.
