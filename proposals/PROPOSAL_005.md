@@ -8,8 +8,9 @@ A.8R distributes one logical manifest as dependent sequential invisible chunks. 
 
 # ARCHITECTURE — TWO LAYERS
 
-Layer 1 — Anchor Manifest
-Layer 2 — Overlapping Redundant Full Manifest Copies
+- Layer 1 — Anchor Manifest
+- Layer 2 — Overlapping Redundant Full Manifest Copies
+
 This architecture is conceptual only. It describes the intended direction of future work. The carrier format, arbitrary-position embedding capability, reconstruction contract, and validation rules have not yet been finalized or implemented.
 
 ## LAYER 1 — ANCHOR MANIFEST
@@ -38,7 +39,7 @@ Purpose:
 Embedded using A.8 — one block per paragraph start character.
 Number of anchors = number of paragraphs in document.
 
-# LAYER 2 — OVERLAPPING REDUNDANT FULL MANIFEST COPIES
+## LAYER 2 — OVERLAPPING REDUNDANT FULL MANIFEST COPIES
 
 Multiple complete copies of the full signed manifest embedded 
 using a proposed A.8R redundant invisible chunk carrier. The exact carrier grammar, embedding mechanism, extraction rules, and reconstruction semantics remain under design and are not part of the current implementation.
@@ -93,7 +94,7 @@ payload bytes. The verifier treats them as interchangeable.
 # RECONSTRUCTION LOGIC
 
 This reconstruction algorithm is illustrative. Final behavior depends on the carrier format ultimately adopted for A.8R.
-s
+
 Step 1 — Collection
 Extract all chunks from all positions in received text.
 Group by seq number across all copy_ids.
@@ -192,15 +193,15 @@ HMAC key derivation:
   zero added dependencies.
 
   ikm, salt, and info are NOT YET DEFINED. They are locked
-  together as one decision — see [D.15] — which must specify
+  together as one decision — which must specify
   the root keying material, whether anchor keys derive from
   the signing key or a separate master secret, and how future
   keys (registry, token, rotation) extend the hierarchy without
   rework.
 
-  Once [D.15] locks, this section is rewritten once with final
+  Once it locks, this section is rewritten once with final
   values and treated as immutable — same rule as the shortcode
-  dictionary. See [D.17].
+  dictionary.
 
 Derived key is sensitive — never logged, never returned
   in error messages, never stored. Same rules as private key.
@@ -228,7 +229,7 @@ Replay attack — original_manifest disclosure threshold:
   Extreme mismatch returns only signed_at, algorithm, and
   content_mismatch reason. Full disclosure reserved for
   minor edits where forensic value outweighs disclosure risk.
-  Threshold locked at 10% — see [D.6]. Implemented in
+  Threshold locked at 10%. Implemented in
   main-pipeline/verificationTool.mjs, confirmed passing in the real
   environment (small-edit discloses, extreme-mismatch
   withholds). Open question for this proposal specifically:
@@ -260,7 +261,6 @@ HMAC timing safety:
   All HMAC comparisons must use crypto.timingSafeEqual().
   Never standard equality. Applies to verifyAnchorHMAC()
   and any other HMAC comparison in the codebase.
-  Stated as global constraint in Section 7.
 
 Magic prefix secondary validation:
   After magic prefix match, validate:
@@ -278,16 +278,16 @@ Registry poisoning defence:
   content_hash validated as exactly 64 lowercase hex
   characters before insert. Reject anything else.
   generating_id currently enforces a safety-only check only
-  (printable ASCII, 1-128 chars) per [D.1] — the structural
+  (printable ASCII, 1-128 chars) - the structural
   format shown below is a candidate direction, not yet
   adopted, and was explicitly deferred to working-group
   input:
     candidate pattern: [a-z0-9-]+-v[0-9]+\.[0-9]+
-    Format definition open — see Section 9.
+    Format definition open.
   Rate limit: maximum registrations per generating_id
   per hour before insert is rejected. created_at exists on
   registry_records, making a Supabase COUNT-based rate limit
-  viable. Threshold open — see Section 9. All three controls
+  viable. Threshold open. All three controls
   applied in registerContent() before Supabase insert runs.
 
 Partial recovery forensic misrepresentation:
@@ -325,14 +325,14 @@ Canonicalization determinism across reconstruction:
   yet verified. No resolution adopted. Must be decided before
   chunkLayer.mjs or reconstructFromChunks() implementation
   begins — see SECURITY_MODEL.md "Security assumptions."
-  Threshold/approach open — see Section 9.
+  Threshold/approach open.
 
 Reconstruction logic requires main-pipeline/verificationTool.mjs update.
 Chunk header format requires main-pipeline/embeddingLayer.mjs update.
-c2pa-text chunk header exposure — see appendix gap 1.
-Position parameter confirmation — see appendix gap 2.
+c2pa-text chunk header exposure.
+Position parameter confirmation.
 Fixed 25% overlap is the spec value for v0.1.
-  Not configurable at runtime.
+Not configurable at runtime.
 
 # CONNECTS TO
 
