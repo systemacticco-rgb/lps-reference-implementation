@@ -1,8 +1,10 @@
 # LPS Reference Implementation — Technical Specification
 Version: 0.1-draft
+
 This document mixes implemented behavior with forward-looking
 architectural specifications. Every section must explicitly
 identify whether it is Built, Defined, Planned, or Placeholder.
+
 Status: [CURRENT AUDITED CONTRACT] v0.1 reference implementation. This
 specification defines the current interface and behavioral contract for the
 audited scope; it does not approve production deployment, governance, or
