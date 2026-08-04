@@ -13,43 +13,6 @@ the current contract where it differs.
 
 ---
 
-## 0.1 Standards-Conformance Boundary [PRE-3 — PENDING]
-
-PRE-3 is a bounded evidence sweep, not a feature or architecture decision.
-Before any external standards wording is expanded, it must inventory every
-LPS claim involving C2PA, COSE, JOSE, RFC 3161, X.509, SHA-256, signatures,
-certificates, canonicalization, or validation; map each one to the applicable
-normative requirement; independently test it; and classify it as supported,
-unsupported, incomplete, or outside LPS scope. Its outputs are a
-claim-to-standard matrix, exact standards/version references, test-vector and
-independent-parser results, deviations/non-claims, and a remediation list.
-
-The v0.1 carrier is an LPS selector-based JSON/native-cryptography format.
-It does not emit the C2PA Appendix A.8-required C2PA Manifest Store in JUMBF
-format or a C2PA COSE_Sign1_Tagged claim signature. Use of selector code
-points alone would not supply that required C2PA structure. Terms such as A.8
-in this specification are legacy LPS route labels unless explicitly
-describing the C2PA standard; they are never proof of C2PA conformance. C2PA
-describes its selected variation selectors as valid Unicode and visually
-non-rendering, so do not assert generic Unicode non-conformance without an
-exact violated rule.
-
-The primary LPS selector-carrier submission decision is closed internally. It
-does not make the carrier a C2PA A.8 implementation or close PRE-3.
-
-LPS trailing-whitespace normalization is an internal text-hash rule. It is
-not C2PA A.8 c2pa.hash.data validation, which has distinct NFC UTF-8 and
-wrapper-offset requirements. C2PA's handling of skipped online OCSP checks
-must not be restated as a mandatory C2PA revocation requirement.
-
-[DEFERRED] Proposal 005 must not be built or pre-submission revised before
-working-group feedback. Proposal 006 remains under review until after
-submission. The audited registry is limited to exact-hash recovery; formal
-provider, issuer, and `generating_id` identity semantics and any future
-identifier grammar remain deferred.
-
----
-
 ## 1. Manifest input and confidence provenance [CURRENT AUDITED CONTRACT]
 
 The manifest generator accepts visible text, segment information, a
