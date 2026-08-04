@@ -85,7 +85,7 @@ double-click copy, tested BiDi-language content, and trailing normalization.
 Those paths showed marker survival in the tested flows, but they do not prove
 cross-platform, cross-browser, cross-editor, or provider compatibility.
 
-[`ADR_2`](ADR_2) records a proposed, testing-tool-only AI-marker grammar:
+It records a proposed, testing-tool-only AI-marker grammar:
 one document-scoped total-count header, no human markers, and no per-span
 ordinals or totals. Its count can expose an excess-pair anomaly but cannot
 localize a missing ordinal or preserve the former human-marker
@@ -96,7 +96,7 @@ tool's valid-pair count. The proposed grammar's detailed error catalog is
 distinct from the LPS `status`, `reason_code`, and
 `carrier_condition` contract.
 
-[`ADR_3`](ADR_3) adds recorded cross-transport observations for the separate
+It adds recorded cross-transport observations for the separate
 tool. Its route results, including messenger selection effects and the
 Facebook Web composer/post difference, describe only the received codepoint
 sequence. Neither a valid signal nor a missing signal identifies a service as
