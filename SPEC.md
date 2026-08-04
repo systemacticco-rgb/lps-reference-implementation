@@ -191,8 +191,7 @@ Constraint: never modify content during embedding
 [STANDARDS BOUNDARY] This component uses selector-carrier operations, but the
 LPS output is not a C2PA A.8 wrapper. The documented v0.1 output lacks the
 C2PA Manifest Store/JUMBF and C2PA COSE_Sign1_Tagged claim signature required
-for that claim. PRE-3 must independently establish any statement about the
-package's own C2PA behavior; package use does not establish LPS conformance.
+for that claim.
 
 Extraction output format: object with properties manifest (Uint8Array),
 cleanText (string), offset (number), length (number).
