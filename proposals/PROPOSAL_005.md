@@ -1,5 +1,4 @@
-## PROPOSAL 005 — LPS redundant invisible chunk carrier
-and Cross-Copy Reconstruction
+## PROPOSAL 005 — LPS redundant invisible chunk carrier and Cross-Copy Reconstruction
 
 Status: proposed — post-v0.1
 
