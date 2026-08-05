@@ -36,9 +36,9 @@ This proposal is a cooperative invisible-Unicode signalling layer for claimed te
 
  The AI-only model is operative. Human span markers, per-span ordinal fields, and per-span total-count fields are removed. The document-level header carries the total AI-span count. Ordinal-level gap localization is not available under the header-only model.
 
-[SECURITY / LIMITATION] A scanner that recognises a complete published grammar can classify text as carrying a claimed cooperative signal. Invisible Unicode alone establishes neither AI origin nor malicious intent; a recognised grammar cannot authenticate an issuer, provider, or author.
+ A scanner that recognises a complete published grammar can classify text as carrying a claimed cooperative signal. Invisible Unicode alone establishes neither AI origin nor malicious intent; a recognised grammar cannot authenticate an issuer, provider, or author.
 
-[LIMITATION] No registry or cryptographic key is part of PROPOSAL 007. A missing marker establishes neither stripping, intent, nor human authorship. Registry recovery in the LPS portfolio is separately limited to an exact visible-text hash with an existing generation-time record; it cannot restore missing span-level evidence.
+ No registry or cryptographic key is part of PROPOSAL 007. A missing marker establishes neither stripping, intent, nor human authorship. Registry recovery in the LPS portfolio is separately limited to an exact visible-text hash with an existing generation-time record; it cannot restore missing span-level evidence.
 
 ---
 
